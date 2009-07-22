@@ -1,0 +1,6 @@
+*.pyc
+netbeans/*
+netbeans
+gridder
+gridder/*
+
