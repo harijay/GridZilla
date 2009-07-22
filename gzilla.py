@@ -24,8 +24,7 @@ class MaFrame(wx.Frame):
 #        self.Fit()
 
 class Validate_Plate_Coordinate(wx.PyValidator):
-    from gridder import masterplate
-    from masterplate import Masterplate
+    from gridder.masterplate import Masterplate
     myplate = Masterplate(2000)
 
     def __init__(self):
@@ -63,7 +62,8 @@ class Validate_Plate_Coordinate(wx.PyValidator):
 
 class PlatePanel(wx.ScrolledWindow):
     num_subplates = 1
-    subplate_array_sizers = []
+    ID_DELETE_PLATE = 111
+
     plate_customizer_dict = {1:("A1","H12"),2:("A1","D6","E1","H12"),3:("A1","","","","","H12"),4:("A1","D6","A7","D12","D1","H6","D7","H12")}
 
     def __init__(self,*args,**kwds):
@@ -72,35 +72,50 @@ class PlatePanel(wx.ScrolledWindow):
 ##        self.SetBackgroundColour(wx.Colour(0,153,77)) # GREEN
 #        self.SetBackgroundColour(wx.Colour(204,255,255)) # BABY BLUE
         self.SetBackgroundColour(wx.Colour(194,194,194))
-        self.platelabel = wx.StaticText(parent=self,id=-1,label="Plate %s" % self.num_subplates,size=(-1,-1),style=wx.ALIGN_CENTER)
-        self.text_ctrl_1 = wx.TextCtrl(parent=self, id=-1,value= "A1",size=(50,-1),validator=Validate_Plate_Coordinate())
-        self.text_ctrl_2 = wx.TextCtrl(parent=self,id=-1,value="A12",size=(50,-1),validator=Validate_Plate_Coordinate())
+#        self.platelabel = wx.StaticText(parent=self,id=-1,label="Plate %s" % self.num_subplates,size=(-1,-1),style=wx.ALIGN_CENTER)
+#        self.text_ctrl_1 = wx.TextCtrl(parent=self, id=-1,value= "A1",size=(50,-1),validator=Validate_Plate_Coordinate())
+#        self.text_ctrl_2 = wx.TextCtrl(parent=self,id=-1,value="A12",size=(50,-1),validator=Validate_Plate_Coordinate())
         self.plate_add_button = wx.Button(self,label="Add Plate")
         self.plate_display_button = wx.Button(self,label="DISPLAY Config")
+        self.refresh_button = wx.Button(self,label="Refresh")
         self.SetScrollRate(3, 3)
         self.do_connections()
         self.do_layout()
         self.bind_delete_events()
-    
-        
+
     def do_layout(self):
-        self.sizer_top = wx.BoxSizer(wx.VERTICAL)
-        sizer_widgets = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_widgets.Add(self.platelabel,1,wx.ALIGN_CENTER)
-        sizer_widgets.Add(self.text_ctrl_1,1,wx.ALIGN_RIGHT)
-        sizer_widgets.Add(self.text_ctrl_2,1,wx.ALIGN_RIGHT)
-        self.sizer_top.Add(sizer_widgets,0,wx.EXPAND)
-        self.subplate_array_sizers.append(sizer_widgets)
-        self.sizer_top.Add(self.plate_add_button,0,wx.ALIGN_RIGHT|wx.ALL,10)
-        self.sizer_top.Add(self.plate_display_button)
-        self.SetSizer(self.sizer_top)
-        self.sizer_top.Layout()
-        self.sizer_top.FitInside(self)
+        self.master_sizer = wx.FlexGridSizer(rows=-1, cols=3, hgap=10, vgap=5)
+        self.master_sizer.Add(self.refresh_button)
+        self.master_sizer.Add(self.plate_display_button)
+        self.master_sizer.Add(self.plate_add_button)
+        self.SetSizer(self.master_sizer)
+        self.master_sizer.Layout()
+        self.master_sizer.FitInside(self)
+
+    def do_new_layout(self):
+        print "lets see"
+        self.plate_add_button = wx.Button(self,label="Add Plate")
+        self.plate_display_button = wx.Button(self,label="DISPLAY Config")
+        self.refresh_button = wx.Button(self,label="Refresh")
+        self.do_connections()
+        self.do_layout()
+        self.bind_delete_events()
+        self.num_subplates = 1
+        
+    def delete_all_plates(self,event):
+        print "Destroying all children"
+        self.DestroyChildren()
+
+        self.do_new_layout()
+
+        
 
 
+    
     def do_connections(self):
         self.Bind(wx.EVT_BUTTON,self.add_plate_def,self.plate_add_button)
         self.Bind(wx.EVT_BUTTON,self.display_plateconfig,self.plate_display_button)
+        self.Bind(wx.EVT_BUTTON,self.delete_all_plates,self.refresh_button)
 #        self.Bind(wx.EVT_MOUSEWHEEL, self.on_mousewheel)
         
     def on_mousewheel(self,event):
@@ -111,31 +126,22 @@ class PlatePanel(wx.ScrolledWindow):
 
     def add_plate_def(self,event):
         self.GetParent().GetStatusBar().SetStatusText("Adding Plate %s" % self.num_subplates)
-        self.num_subplates = self.num_subplates + 1
-        # Get the add plate Button and hold on to it
-        for sizers in self.subplate_array_sizers:
-            self.sizer_top.Detach(sizers)
-
-        self.sizer_top.Detach(self.plate_add_button)
-        self.sizer_top.Detach(self.plate_display_button)
         platelabel = wx.StaticText(parent=self,id=-1,label="Plate %s" % self.num_subplates , size=(-1,-1),style=wx.ALIGN_CENTER )
         text_ctrl_1 = wx.TextCtrl(self, -1, "",(50,-1),validator=Validate_Plate_Coordinate())
         text_ctrl_2 = wx.TextCtrl(self,-1,"",(50,-1),validator=Validate_Plate_Coordinate())
-        sizer_widgets = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_widgets.Add(platelabel,1,wx.ALIGN_RIGHT|wx.ALIGN_CENTER)
-        sizer_widgets.Add(text_ctrl_1,1,wx.ALIGN_RIGHT|wx.ALIGN_CENTER)
-        sizer_widgets.Add(text_ctrl_2,1,wx.ALIGN_RIGHT|wx.ALIGN_CENTER)
-        self.subplate_array_sizers.append(sizer_widgets)
-        for w in self.subplate_array_sizers:
-            self.sizer_top.Add(w,0,wx.EXPAND)
-        self.sizer_top.Add(self.plate_add_button,0,wx.ALIGN_RIGHT|wx.ALL,10)
-        self.sizer_top.Add(self.plate_display_button)
+        self.master_sizer.Add(platelabel,1,wx.ALIGN_CENTER)
+        self.master_sizer.Add(text_ctrl_1,1,wx.ALIGN_CENTER)
+        self.master_sizer.Add(text_ctrl_2,1,wx.ALIGN_CENTER)
         #self.sizer_top.Add(self.plate_add_button,1,wx.RIGHT|wx.ALIGN_BOTTOM,10)
-        self.sizer_top.Layout()
-        self.sizer_top.Fit(self)
+       
         self.has_config()
-        self.GetParent().do_layout()
         self.bind_delete_events()
+
+        self.master_sizer.Layout()
+        self.master_sizer.Fit(self)
+        
+        self.num_subplates = self.num_subplates + 1
+        self.GetParent().do_layout()
         #self.GetParent().Fit()
 
 
@@ -145,37 +151,49 @@ class PlatePanel(wx.ScrolledWindow):
         for child in self.GetChildren():
             if isinstance(child, wx.StaticText):
                 if plate_pattern.search(child.GetLabel()):
-#                    child.Bind(wx.EVT_RIGHT_DOWN ,lamda event, caller=child :self.delete_platedef(event,caller))
-                    child.Bind(wx.EVT_RIGHT_DOWN,lambda event, caller= child: self.delete_platedef(event,caller))
+                    child.Bind(wx.EVT_RIGHT_DOWN,lambda event, caller= child: self.show_plate_delete_choice(event,caller))
+
     def has_config(self):
         # Local variable to run along plate config tuple using self.plate_customizer_dict[self.num_subplates][scanner]
         scanner = 0
-        if self.plate_customizer_dict.has_key(self.num_subplates):
-            for w in self.subplate_array_sizers:
-                for possible_plate in w.GetChildren(): 
-                    if isinstance(possible_plate.GetWindow(), wx.TextCtrl):
-                        self.GetParent().GetStatusBar().SetStatusText("settingplate boundaries automatic done")
-                        possible_plate.GetWindow().SetValue(self.plate_customizer_dict[self.num_subplates][scanner])
-                        scanner = scanner + 1
-#
-#    def on_right_click(self,event):
-#        self.PopupMenu(self.menu)
+        for child in self.GetChildren():
+            if isinstance(child, wx.TextCtrl):
+                self.GetParent().GetStatusBar().SetStatusText("settingplate boundaries automatic done")
+                try:
+                    child.SetValue(self.plate_customizer_dict[self.num_subplates][scanner])
+                except KeyError , e:
+                    pass
+                scanner = scanner + 1
 
-    def delete_platedef(self,event,caller):
-        import re
-        plate_pattern = re.compile("Plate \d")
+
+    def show_plate_delete_choice(self,event,caller):
+        def delete_component(mycaller):
+            print "Deleting plate %s NOT YET IMPLEMENTED " % mycaller.GetLabel()
+            wx.MessageBox("Deleting plate %s NOT YET IMPLEMENTED " % mycaller.GetLabel())
+            # first find the element:
+#            all_children = self.master_sizer.GetChildren()
+#            print all_children
+#            i = 1
+#            for child in all_children:
+#                if isinstance(child.GetWindow(),wx.StaticText):
+#                    i = i + 3
+#                    if child.GetWindow().GetLabel() == mycaller.GetLabel():
+#                        print "removing three" , i , i + 1 , i + 2
+#                        self.master_sizer.Remove(all_children[i].GetWindow())
+#                        self.master_sizer.Remove(all_children[i + 1].GetWindow())
+#                        self.master_sizer.Remove(all_children[i + 2].GetWindow())
+#                        self.num_subplates = self.num_subplates - 1
+
         menu = wx.Menu()
-        menu.Append(-1,"Delete Plate")
+        menu.Append(-1,"")
+        menu.Append(self.ID_DELETE_PLATE,"Delete Plate")
+        menu.Append(-1,"")
         self.PopupMenu(menu)
-         # Implement Component Deletion"
-        print "Delete PlateDef called on object", caller.GetLabel()
-        self.sizer_top.Remove(caller)
-        #self.sizer_top.Add(self.plate_add_button,1,wx.RIGHT|wx.ALIGN_BOTTOM,10)
-        self.sizer_top.Layout()
-        self.sizer_top.Fit(self)
-        self.has_config()
-        self.GetParent().do_layout()
-        self.bind_delete_events()
+        wx.EVT_MENU(self,self.ID_DELETE_PLATE,delete_component(caller))
+
+
+        
+ 
         
     def display_plateconfig(self,event):
         from gridder.masterplate import Masterplate
@@ -239,17 +257,17 @@ class  ComponentPanel(wx.ScrolledWindow):
         self.top_grid_sizer.Add((1,1),1)
         self.top_grid_sizer.Add((1,1),1)
         self.component_number_slot = wx.StaticText(parent=self,id=-1,label="",size=(-1,-1))
-        self.component_name_label = wx.StaticText(self, -1, "Component Name",(-1,-1))
-        self.component_conc_label = wx.StaticText(self,-1,"Concentration",(-1,-1))
-        self.component_volume_label = wx.StaticText(self,-1,"Volume",(-1,-1))
-        self.component_ph_label = wx.StaticText(self,-1,"pH",(-1,-1))
-        self.component_pka_label = wx.StaticText(self,-1,"pKa",(-1,-1))
+        self.component_name_label = wx.StaticText(self, -1, "Component Name",style=wx.ALIGN_CENTER)
+        self.component_conc_label = wx.StaticText(self,-1,"Concentration",style=wx.ALIGN_CENTER)
+        self.component_volume_label = wx.StaticText(self,-1,"Volume",style=wx.ALIGN_CENTER)
+        self.component_ph_label = wx.StaticText(self,-1,"pH",style=wx.ALIGN_CENTER)
+        self.component_pka_label = wx.StaticText(self,-1,"pKa",style=wx.ALIGN_CENTER)
         self.top_grid_sizer.Add(self.component_number_slot,1,wx.ALIGN_CENTER)
-        self.top_grid_sizer.Add(self.component_name_label,wx.EXPAND|wx.ALIGN_CENTER)
+        self.top_grid_sizer.Add(self.component_name_label,1,wx.EXPAND|wx.ALIGN_CENTER)
         self.top_grid_sizer.Add(self.component_conc_label,1,wx.EXPAND|wx.ALIGN_CENTER)
         self.top_grid_sizer.Add(self.component_volume_label,wx.EXPAND|wx.ALIGN_CENTER)
-        self.top_grid_sizer.Add(self.component_ph_label,1,wx.ALIGN_CENTER)
-        self.top_grid_sizer.Add(self.component_pka_label,1,wx.ALIGN_CENTER)
+        self.top_grid_sizer.Add(self.component_ph_label,1,wx.EXPAND|wx.ALIGN_CENTER)
+        self.top_grid_sizer.Add(self.component_pka_label,1,wx.EXPAND|wx.ALIGN_CENTER)
         self.menu = wx.Menu()
         self.menu.Append(-1,"Delete Component")
         wx.EVT_MENU( self.menu, -1, self.delete_component )
@@ -305,10 +323,10 @@ class  ComponentPanel(wx.ScrolledWindow):
             text_ctrl_1 = wx.TextCtrl(self, -1, component_array[0],(-1,-1))
             text_ctrl_2 = wx.TextCtrl(self,-1,component_array[1],(-1,-1))
             text_ctrl_3 = wx.TextCtrl(self,-1,component_array[2],(-1,-1))
-            self.top_grid_sizer.Add(componentlabel,1,wx.ALIGN_CENTER)
-            self.top_grid_sizer.Add(text_ctrl_1,1,wx.EXPAND|wx.ALIGN_CENTER)
-            self.top_grid_sizer.Add(text_ctrl_2,1,wx.EXPAND|wx.ALIGN_CENTER)
-            self.top_grid_sizer.Add(text_ctrl_3,1,wx.EXPAND|wx.ALIGN_CENTER)
+            self.top_grid_sizer.Add(componentlabel,1,wx.ALIGN_LEFT|wx.ALIGN_CENTER)
+            self.top_grid_sizer.Add(text_ctrl_1,1,wx.ALIGN_CENTER)
+            self.top_grid_sizer.Add(text_ctrl_2,1,wx.ALIGN_CENTER)
+            self.top_grid_sizer.Add(text_ctrl_3,1,wx.ALIGN_CENTER)
             self.top_grid_sizer.Add((1,1),1)
             self.top_grid_sizer.Add((1,1),1)
             
@@ -321,12 +339,12 @@ class  ComponentPanel(wx.ScrolledWindow):
             text_ctrl_3 = wx.TextCtrl(self,-1,component_array[2],(-1,-1))
             text_ctrl_4 = wx.TextCtrl(self,-1,component_array[3],(-1,-1))
             text_ctrl_5 = wx.TextCtrl(self,-1,component_array[4],(-1,-1))
-            self.top_grid_sizer.Add(componentlabel,1,wx.ALIGN_CENTER)
-            self.top_grid_sizer.Add(text_ctrl_1,1,wx.EXPAND|wx.ALIGN_CENTER)
-            self.top_grid_sizer.Add(text_ctrl_2,1,wx.EXPAND|wx.ALIGN_CENTER)
-            self.top_grid_sizer.Add(text_ctrl_3,1,wx.EXPAND|wx.ALIGN_CENTER)
-            self.top_grid_sizer.Add(text_ctrl_4,1,wx.EXPAND|wx.ALIGN_CENTER)
-            self.top_grid_sizer.Add(text_ctrl_5,1,wx.EXPAND|wx.ALIGN_CENTER)
+            self.top_grid_sizer.Add(componentlabel,1,wx.ALIGN_LEFT|wx.ALIGN_CENTER)
+            self.top_grid_sizer.Add(text_ctrl_1,1,wx.ALIGN_CENTER)
+            self.top_grid_sizer.Add(text_ctrl_2,1,wx.ALIGN_CENTER)
+            self.top_grid_sizer.Add(text_ctrl_3,1,wx.ALIGN_CENTER)
+            self.top_grid_sizer.Add(text_ctrl_4,1,wx.ALIGN_CENTER)
+            self.top_grid_sizer.Add(text_ctrl_5,1,wx.ALIGN_CENTER)
             
         self.bind_delete_events()
         self.top_grid_sizer.Fit(self)
