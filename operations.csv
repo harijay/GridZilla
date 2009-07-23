@@ -1,0 +1,19 @@
+Add To Row,Component,FinalConc,ALPHA
+Add To Column,Component,FinalConc,NUM
+Add To Entire Plate,Component,FinalConc
+Gradient Along X,Component,FinalConcStart,FinalConcStop
+Gradient Along Y,Component,FinalConcStart,FinalConcStop
+Gradient List Along X,Component,LISTVALS
+Gradient List Along Y,Component,LISTVALS
+Component To Multiple Rows,Component,FinalConc,LISTROWS
+Component To Multiple Columns,Component,FinalConc,LISTCOLS
+#Mapped Components to ROWS,ComponentList,FinalConcList,LISTROWS
+#Mapped Components to Columns,ComponentList,FinalConcList,LISTCOLS
+Buffer pH Gradient Along X,Buffer,Buffer,FinalConc,pHSTART,pHSTOP
+Buffer pH Gradient Along Y,Buffer,Buffer,FinalConc,pHSTART,pHSTOP
+Buffer pH List Along X,Buffer,Buffer,FinalConc,LISTVALS
+Buffer pH List Along Y,Buffer,Buffer,FinalConc,LISTVALS
+Make To 100 Along X,Component,Component,FinalConc,FinalConcStartComponent1,FinalConcStopComponent1
+Make To 100 Along Y,Component,Component,FinalConc,FinalConcStartComponent1,FinalConcStopComponent1
+Make To 100 List X,Component,Component,FinalConc,LISTVALS
+Make To 100 List Y,Component,Component,FinalConc,LISTVALS
