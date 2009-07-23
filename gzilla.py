@@ -6,12 +6,14 @@
 import wx
 import wx.lib.scrolledpanel  as myscrolledpanel
 import wx.lib.inspection
-MYFRAMESIZE = (787,321)
+MYFRAMESIZE = (995,850)
 
 import sys
 sys.path.append("/home/hari/gridder")
 class MaFrame(wx.Frame):
     plates = []
+    components = []
+
     PLATE_CONFIGURED = False
     IS_BEGUN = True
 
@@ -215,7 +217,7 @@ class PlatePanel(wx.ScrolledWindow):
                 print self.GetParent().PLATE_CONFIGURED
                 self.GetParent().PLATE_CONFIGURED = True
                 self.GetParent().PLATE_CONFIGURED
-                self.GetParent().FindWindowByName("plateop").pick_operations_from_master()
+                self.GetParent().FindWindowByName("plateop").make_plate_choicelist()
 
         event.Skip()
 
@@ -367,7 +369,9 @@ class  ComponentPanel(wx.ScrolledWindow):
             self.create_component_gui_entry(component_array)
 
     def set_components(self,event):
-        event.Skip()
+        for element in self.GetChildren:
+            if isinstance(element,wx.StaticText):
+                pass
 
 
 
@@ -413,46 +417,69 @@ class PlateOperations(wx.ScrolledWindow):
     IS_COORD = None
     operations_file_name = u"operations.csv"
     choices = []
-    choiceboxes = []
+    plate_choice_boxlist = []
+    dispense_choice_boxlist = []
+
     def __init__(self,*args,**kwds):
         wx.ScrolledWindow.__init__(self,*args,**kwds)
-        self.make_op_tree()
+        kwds["size"] = MYFRAMESIZE
+        self.add_op_button = wx.Button(self,label="Add Operation")
+        self.Bind(wx.EVT_BUTTON,self.add_operation,self.add_op_button)
         self.SetScrollRate(3,3)
-
-
-    def do_layout(self):
         self.po_sizer = wx.GridSizer(-1,10,3,5)
-        for c in self.choiceboxes:
-            self.po_sizer.Add(c)
+        self.po_sizer.Add(self.add_op_button)
+        for i in range(9):
+            self.po_sizer.Add((1,1),1)
+        
+        self.make_choice_list()
+        self.do_init_layout()
+        self.SetScrollRate(3,3)
         self.SetSizer(self.po_sizer)
-        self.po_sizer.Layout()
         self.po_sizer.Fit(self)
+        
+    def do_init_layout(self):
+        self.Layout()
+        self.GetParent().do_layout()
+        
 
-    def pick_operations_from_master(self):
-
+    def add_operation(self,event):
         if self.GetParent().PLATE_CONFIGURED:
-            self.choiceboxes = []
-            self.cb1 = PromptingComboBox(self, "", self.GetParent().plates, style=wx.CB_SORT)
-            self.choiceboxes.append(self.cb1)
-            self.choiceboxes.append(self.dispense_combobox)
-        self.do_layout()
-        print "SETTING BUTTON TO UNCLICKABLE " ,self.GetParent().FindWindowByName("platesetup").GetName()
-#        self.GetParent().FindWindowByName("platesetup").plate_add_button.Enable(False)
-        self.GetParent().Layout()
+            print "Add Op"
+            new_plate_choice = PromptingComboBox(self, "", self.platelist, style=wx.CB_SORT)
+            new_dispense_combobox = PromptingComboBox(self, "", self.choices, style=wx.CB_SORT)
+            self.plate_choice_boxlist.append(new_dispense_combobox)
+            self.dispense_choice_boxlist.append(new_dispense_combobox)
+            self.po_sizer.Add(new_plate_choice,wx.EXPAND|wx.ALIGN_CENTER)
+            self.po_sizer.Add(new_dispense_combobox,wx.EXPAND|wx.ALIGN_CENTER)
+            for i in range(8):
+                self.po_sizer.Add((1,1),1)
+            self.do_init_layout()
+        else:
+            wx.MessageBox("No Plates: Please Set Plate COnfig and then try")
+  
 
-    def make_op_tree(self):
+    def make_plate_choicelist(self):
+        # Called by Other Class to create list used to setup comboboxes here
+        if self.GetParent().PLATE_CONFIGURED:
+            self.platelist = self.GetParent().plates
+
+#        print "SETTING BUTTON TO UNCLICKABLE " ,self.GetParent().FindWindowByName("platesetup").GetName()
+#        self.GetParent().FindWindowByName("platesetup").plate_add_button.Enable(False)
+        
+
+    def make_choice_list(self):
         import csv
+        self.dispense_choice_boxlist = []
         self.operations_file = open(self.operations_file_name, "r")
         csvreader_object = csv.reader(self.operations_file,dialect=csv)
-
         for operations_array_element in csvreader_object:
             print operations_array_element
             newchoice = operations_array_element[0]
+            # Comments in file have # as first character and are ignored
             if newchoice[0] != "#":
                 self.choices.append(newchoice)
-         
-        self.dispense_combobox = PromptingComboBox(self, "", self.choices, style=wx.CB_SORT)
-        self.do_layout()
+        
+
 
 
 
@@ -466,7 +493,7 @@ if __name__=="__main__":
     component_panel = ComponentPanel(parent=maframe)
     maframe.GetSizer().Add(component_panel,4,wx.ALIGN_BOTTOM|wx.EXPAND)
     plateoperations = PlateOperations(parent=maframe,name="plateop")
-    maframe.GetSizer().Add(plateoperations,5,wx.ALIGN_BOTTOM|wx.EXPAND)
+    maframe.GetSizer().Add(plateoperations,4,wx.ALIGN_BOTTOM|wx.EXPAND)
     maframe.Layout()
     maframe.Show()
     print plateoperations.GetName()
