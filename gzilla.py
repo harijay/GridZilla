@@ -6,7 +6,7 @@
 import wx
 import wx.lib.scrolledpanel  as myscrolledpanel
 import wx.lib.inspection
-MYFRAMESIZE = (995,850)
+MYFRAMESIZE = (800,500)
 
 import sys
 sys.path.append("/home/hari/gridder")
@@ -218,28 +218,16 @@ class PlatePanel(wx.ScrolledWindow):
                 self.GetParent().PLATE_CONFIGURED = True
                 self.GetParent().PLATE_CONFIGURED
                 self.GetParent().FindWindowByName("plateop").make_plate_choicelist()
+                self.GetParent().FindWindowByName("plateop").refresh_plate_choice_comboboxes()
 
         event.Skip()
 
 
-class plate_layout(object):
-#    from gridder.component import Component
-    grid_operations = []
-    plate_choices = []
-    components = []
-    buffer_choices = []
-
-    def __init__(self):
-        pass
-    
-    def register_component(self,*input):
-        pass
 
 
 
 class  ComponentPanel(wx.ScrolledWindow):
     import csv
-    userinput = plate_layout()
     num_components = 1
     component_array_sizers = []
     is_VALID = False
@@ -440,7 +428,22 @@ class PlateOperations(wx.ScrolledWindow):
     def do_init_layout(self):
         self.Layout()
         self.GetParent().do_layout()
-        
+
+    def refresh_plate_choice_comboboxes(self):
+#        print "hoobajabacks"
+#        rows,cols =  self.po_sizer.CalcRowsCols()
+#        for itemnum in range(11,rows*cols,cols):
+#            print "Removing item no %d" % itemnum
+#            self.po_sizer.Detach(self.po_sizer.GetItem(itemnum).GetWindow())
+#            new_plate_choice = PromptingComboBox(self, "", self.platelist, style=wx.CB_SORT)
+#            self.po_sizer.InsertItem(new_plate_choice.GetBestSize() ,itemnum)
+#            print "REFRESH DONE at position %d" % itemnum
+#        self.po_sizer.Layout()
+#        print "refresh of exisiting combobox : Not yet Implemented"
+        pass
+
+
+
 
     def add_operation(self,event):
         if self.GetParent().PLATE_CONFIGURED:
