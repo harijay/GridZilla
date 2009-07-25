@@ -7,8 +7,6 @@ Gradient List Along X,Component,LISTVALS
 Gradient List Along Y,Component,LISTVALS
 Component To Multiple Rows,Component,FinalConc,LISTROWS
 Component To Multiple Columns,Component,FinalConc,LISTCOLS
-#Mapped Components to ROWS,ComponentList,FinalConcList,LISTROWS
-#Mapped Components to Columns,ComponentList,FinalConcList,LISTCOLS
 Buffer pH Gradient Along X,Buffer,Buffer,FinalConc,pHSTART,pHSTOP
 Buffer pH Gradient Along Y,Buffer,Buffer,FinalConc,pHSTART,pHSTOP
 Buffer pH List Along X,Buffer,Buffer,FinalConc,LISTVALS
@@ -17,3 +15,5 @@ Make To 100 Along X,Component,Component,FinalConc,FinalConcStartComponent1,Final
 Make To 100 Along Y,Component,Component,FinalConc,FinalConcStartComponent1,FinalConcStopComponent1
 Make To 100 List X,Component,Component,FinalConc,LISTVALS
 Make To 100 List Y,Component,Component,FinalConc,LISTVALS
+#Mapped Components to ROWS,ComponentList,FinalConcList,LISTROWS
+#Mapped Components to Columns,ComponentList,FinalConcList,LISTCOLS
