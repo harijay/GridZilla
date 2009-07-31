@@ -10,6 +10,7 @@ MYFRAMESIZE = (1100,500)
 
 import sys
 sys.path.append("/home/hari/gridder")
+
 class MaFrame(wx.Frame):
     plates = []
     components = []
@@ -248,6 +249,8 @@ class  ComponentPanel(wx.ScrolledWindow):
     is_VALID = False
     component_namedict = {}
     buffer_namedict = {}
+    all_solutionsdict = {}
+    IS_CONFIGURED = False
 
     def __init__(self,*args, **kwds):
         kwds["size"] = MYFRAMESIZE
@@ -396,6 +399,7 @@ class  ComponentPanel(wx.ScrolledWindow):
                     # component_namedict is keyed by component number(int) and has index 0 : Name, index 1: Conc, index 2: Volume
                     print "Added component num :  %d , Name : %s , Concentration : %s Volume : %s " % tuple([rownum] + itemvals)
                     self.component_namedict[rownum] = itemvals
+                    self.all_solutionsdict[rownum] = itemvals
 
             if "Buffer" in self.top_grid_sizer.GetItem(rownum*cols + 0 ).GetWindow().GetLabel():
                 if self.top_grid_sizer.GetItem(rownum*cols + 1 ).GetWindow().GetValue() == "" or \
@@ -411,8 +415,11 @@ class  ComponentPanel(wx.ScrolledWindow):
                         # component_namedict is keyed by component number(int) and has index 0 : Name, index 1: Conc, index 2: Volume , index 3 :pH , index 4 : pka
                         # NOTE ROWNUMS are part of sequence and not separate i.e. keys here dont start at 0 and may not be sequential
                     self.buffer_namedict[rownum] = itemvals
-                    print "Added buffer component num :  %d , Name : %s , Concentration : %s Volume : %s pH: %s  pKa : %s" % tuple([rownum] + itemvals)
+                    self.all_solutionsdict[rownum] = itemvals
 
+                    print "Added buffer component num :  %d , Name : %s , Concentration : %s Volume : %s pH: %s  pKa : %s" % tuple([rownum] + itemvals)
+        self.GetParent().FindWindowByName("plateop").make_component_choice_list()
+        self.IS_CONFIGURED = True
 class PromptingComboBox(wx.ComboBox) :
     def __init__(self, parent, value, choices=[], style=0, rowposition=0,**par):
         wx.ComboBox.__init__(self, parent, wx.ID_ANY, value, style=style|wx.CB_DROPDOWN, choices=choices,**par)
@@ -465,6 +472,10 @@ class PlateOperations(wx.ScrolledWindow):
     platelist = []
     masterdict = {}
     plate_operations = {}
+    # Combobox choices populated by events that propagate from above
+    component_frame_choices = []
+    buffer_frame_choices = []
+
     # plate_id_mapper_dict maps plate components to their row positions
     plate_id_mapper_dict = {}
     def __init__(self,*args,**kwds):
@@ -493,6 +504,8 @@ class PlateOperations(wx.ScrolledWindow):
     def do_init_layout(self):
         self.Layout()
         self.GetParent().do_layout()
+        self.SetScrollRate(3,3)
+        self.po_sizer.FitInside(self)
     
     def refresh_plate_choice_comboboxes(self):
         print "New plate added to Plate list, now number of plates is : %d" % len(self.platelist)
@@ -515,37 +528,76 @@ class PlateOperations(wx.ScrolledWindow):
         pass
 
     def on_operation_combobox_select(self,event,operationcombobox):
+        if not self.GetParent().FindWindowByName("components").IS_CONFIGURED:
+            self.make_component_choice_list()
+
         print "selected Operation combobox event %s %s from rid row %d " % (event.GetString(),event.GetId(),operationcombobox.rowposition)
         mystring = event.GetString()
         self.plate_operations[event.GetId()] = mystring
         print "Building Arguments",self.masterdict[event.GetString()]
-        if self.masterdict[event.GetString()][0] == "Component":
-            print "Inserting Component selector"
-            self.make_component_choice_list()
-#            newcombo = wx.ComboBox(self,-1,"",choices=self.component_frame_choices)
-#            if self.po_sizer.GetItem(self.).GetWindow()
-##            self.po_sizer.InsertItem(23,newcombo)
+        argcount = 0
+        for arg in self.masterdict[event.GetString()]:
 
+            if arg  == "Component":
+                print "Inserting Component selector to row %d  column %d" % (operationcombobox.rowposition,argcount)
+                newcombo = wx.ComboBox(self,-1,"",choices=self.component_frame_choices)
+
+                if self.po_sizer.GetItem(int(operationcombobox.rowposition)*10  + 2 + argcount ):
+                    print "replace called on posn %d " % (int(operationcombobox.rowposition)*int(10) + int(2)  + argcount )
+                    oldwindow = self.po_sizer.GetItem(int(operationcombobox.rowposition)*int(10) + int(2) + argcount).GetWindow()
+                    self.po_sizer.Replace(oldwindow , newcombo)
+                    self.Layout()
+
+
+                else:
+                    print " Fresh item insertion attempt"
+                    self.po_sizer.Replace(int(operationcombobox.rowposition)*10 + int(2) + argcount, newcombo)
+                    self.po_sizer.Layout()
+
+            elif arg == "Buffer":
+                print "Inserting Buffer selector to row %d  , column %d" % (operationcombobox.rowposition,argcount)
+                print self.buffer_frame_choices
+                newcombo = wx.ComboBox(self,-1,"",choices=self.buffer_frame_choices)
+
+                if self.po_sizer.GetItem(int(operationcombobox.rowposition)*10  + 2 + argcount ):
+                    print "replace called on posn %d column %d " % (int(operationcombobox.rowposition)*int(10) + int(2) + argcount,argcount )
+                    oldwindow = self.po_sizer.GetItem(int(operationcombobox.rowposition)*int(10) + int(2) + argcount).GetWindow()
+                    self.po_sizer.Replace(oldwindow , newcombo)
+                    self.Layout()
+
+
+                else:
+                    print " Fresh item insertion attempt"
+                    self.po_sizer.Replace(int(operationcombobox.rowposition)*10 + int(2) + argcount, newcombo)
+                    self.po_sizer.Layout()
+           
+            argcount = argcount + 1 
     
     def add_operation(self,event):
-        if self.GetParent().PLATE_CONFIGURED:
-            mynewchoice = self.platelist
-            # Hardcode row position into object for script generation purposes
-            currentrowpos,currentcolpos  = self.po_sizer.CalcRowsCols()
-            new_platechoice_combobox = PromptingComboBox(self,"",choices=mynewchoice, style=wx.CB_SORT,rowposition=currentrowpos)
-            # Need to lambda the combobox so we can know which row the event came from
-            new_platechoice_combobox.Bind(wx.EVT_COMBOBOX,lambda event, platecallercombobox=new_platechoice_combobox : self.on_plate_combobox_select(event,platecallercombobox))
-            new_dispense_combobox = PromptingComboBox(self,"", choices=self.choices, style=wx.CB_SORT,size=(280,-1),rowposition=currentrowpos)
-            new_dispense_combobox.Bind(wx.EVT_COMBOBOX,lambda event,operationcombobox=new_dispense_combobox : self.on_operation_combobox_select(event,operationcombobox))
-            self.plate_combobox_objects.append(new_platechoice_combobox)
-            self.dispense_choice_boxlist.append(new_dispense_combobox)
-            self.po_sizer.Add(new_platechoice_combobox,1,wx.EXPAND|wx.ALIGN_CENTER)
-            self.po_sizer.Add(new_dispense_combobox,5,wx.EXPAND|wx.ALIGN_CENTER)
-            for i in range(8):
-                self.po_sizer.Add((1,1),1)
-            self.do_init_layout()
-            for item in self.plate_combobox_objects:
-                self.plate_id_mapper_dict[item.GetId()] = item.rowposition
+        if self.GetParent().PLATE_CONFIGURED :
+            if self.GetParent().FindWindowByName("components").IS_CONFIGURED:
+                mynewchoice = self.platelist
+                # Hardcode row position into object for script generation purposes
+                currentrowpos,currentcolpos  = self.po_sizer.CalcRowsCols()
+                new_platechoice_combobox = PromptingComboBox(self,"",choices=mynewchoice, style=wx.CB_SORT,rowposition=currentrowpos)
+                # Need to lambda the combobox so we can know which row the event came from
+                new_platechoice_combobox.Bind(wx.EVT_COMBOBOX,lambda event, platecallercombobox=new_platechoice_combobox : self.on_plate_combobox_select(event,platecallercombobox))
+                new_dispense_combobox = PromptingComboBox(self,"", choices=self.choices, style=wx.CB_SORT,size=(280,-1),rowposition=currentrowpos)
+                new_dispense_combobox.Bind(wx.EVT_COMBOBOX,lambda event,operationcombobox=new_dispense_combobox : self.on_operation_combobox_select(event,operationcombobox))
+                self.plate_combobox_objects.append(new_platechoice_combobox)
+                self.dispense_choice_boxlist.append(new_dispense_combobox)
+                self.po_sizer.Add(new_platechoice_combobox,1,wx.EXPAND|wx.ALIGN_CENTER)
+                self.po_sizer.Add(new_dispense_combobox,5,wx.EXPAND|wx.ALIGN_CENTER)
+                for i in range(8):
+                    dummypanel = wx.Panel(self,-1,size=(140,-1))
+    #                dummypanel.SetBackgroundColour(wx.Colour(112,122,223))
+                    self.po_sizer.Add(dummypanel,1,wx.EXPAND|wx.ALIGN_CENTER)
+                self.do_init_layout()
+                self.GetParent().Layout()
+                for item in self.plate_combobox_objects:
+                    self.plate_id_mapper_dict[item.GetId()] = item.rowposition
+            else:
+                wx.MessageBox("No Plates: Please Configure components and then add operations")
         else:
             wx.MessageBox("No Plates: Please Set Plate COnfig and then try")
 
@@ -562,10 +614,17 @@ class PlateOperations(wx.ScrolledWindow):
 #        self.GetParent().FindWindowByName("platesetup").plate_add_button.Enable(False)
 
     def make_component_choice_list(self):
-        self.component_frame_choices = self.GetParent().FindWindowByName("components").component_namedict.keys()
-        self.buffer_frame_choices = self.GetParent().FindWindowByName("components").buffer_namedict.keys()
+        try:
+            for key in self.GetParent().FindWindowByName("components").all_solutionsdict:
+                self.component_frame_choices.append(self.GetParent().FindWindowByName("components").all_solutionsdict[key][0])
+            for key in self.GetParent().FindWindowByName("components").buffer_namedict:
+                self.buffer_frame_choices.append(self.GetParent().FindWindowByName("components").buffer_namedict[key][0])
+        except KeyError , e:
+            print "Something wrong , no generation of Component list or plate list possible at this time"
+            if not self.GetParent().FindWindowByName("components").IS_CONFIGURED:
+                wx.MessageBox("Please configure components and retry")
 
-    
+
     def make_choice_list(self):
         import csv
         self.dispense_choice_boxlist = []
