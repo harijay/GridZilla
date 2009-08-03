@@ -3,6 +3,7 @@
 # and open the template in the editor.
 
 
+from wx._core import FindWindowByName
 import wx
 import wx.lib.scrolledpanel  as myscrolledpanel
 import wx.lib.inspection
@@ -108,7 +109,6 @@ class PlatePanel(wx.ScrolledWindow):
         
         self.do_new_layout()
 
-    
     def do_connections(self):
         self.Bind(wx.EVT_BUTTON,self.add_plate_def,self.plate_add_button)
         self.Bind(wx.EVT_BUTTON,self.set_plate_config,self.plate_display_button)
@@ -232,6 +232,12 @@ class PlatePanel(wx.ScrolledWindow):
                 self.GetParent().PLATE_CONFIGURED
                 self.GetParent().FindWindowByName("plateop").make_plate_choicetxtlist()
                 self.GetParent().FindWindowByName("plateop").refresh_plate_choice_comboboxes()
+        self.plate_setup_dict = {}
+        rows,cols = self.master_sizer.CalcRowsCols()
+        for row in range(1,rows,1):
+#                print "p%s = plate.Plate(\"%s\",\"%s\")" % ( row,self.master_sizer.GetItem(cols*row + 1).GetWindow().GetValue() , self.master_sizer.GetItem(cols*row + 2).GetWindow().GetValue())
+                self.plate_setup_dict[row] = [self.master_sizer.GetItem(cols*row + 1).GetWindow().GetValue(),self.master_sizer.GetItem(cols*row + 2).GetWindow().GetValue()]
+
         
         event.Skip()
 
@@ -396,6 +402,7 @@ class  ComponentPanel(wx.ScrolledWindow):
                             itemvals.append(self.top_grid_sizer.GetItem(rownum*cols + t + 1).GetWindow().GetValue())
                         # component_namedict is keyed by component number(int) and has index 0 : Name, index 1: Conc, index 2: Volume
                         print "Added component num :  %d , Name : %s , Concentration : %s Volume : %s " % tuple([rownum] + itemvals)
+
                         self.component_namedict[rownum] = itemvals
                         self.all_solutionsdict[rownum] = itemvals
 
@@ -415,7 +422,7 @@ class  ComponentPanel(wx.ScrolledWindow):
                         self.buffer_namedict[rownum] = itemvals
                         self.all_solutionsdict[rownum] = itemvals
 
-                        print "Added buffer component num :  %d , Name : %s , Concentration : %s Volume : %s pH: %s  pKa : %s" % tuple([rownum] + itemvals)
+#                        print "Added buffer component num :  %d , Name : %s , Concentration : %s Volume : %s pH: %s  pKa : %s" % tuple([rownum] + itemvals)
             self.GetParent().FindWindowByName("plateop").make_component_choice_list()
             self.IS_CONFIGURED = True
 
@@ -460,6 +467,13 @@ class PromptingComboBox(wx.ComboBox) :
 
 class PlateOperations(wx.ScrolledWindow):
     #dict structure is an operations followed by a dict of arguments
+    function_dict = {"Add To Row":"push_component_to_row_on_masterplate",\
+    "Add To Column":"push_component_to_column_on_masterplate","Add To Entire Plate":"push_component_uniform_to_masterplate",\
+    "Gradient Along X":"gradient_along_x","Gradient Along Y":"gradient_along_y","Gradient List Along X":"gradientlist_along_x",\
+    "Gradient List Along Y":"gradientlist_along_y","Component To Multiple Rows":"push_component_rowlist",\
+    "Component To Multiple Columns":"push_component_columnlist","Buffer pH Gradient Along X":"ph_gradient_alongx","Buffer pH Gradient Along Y":"ph_gradient_alongy",\
+    "Buffer pH List Along X":"ph_list_alongx","Buffer pH List Along Y":"ph_list_alongy","Make To 100 Along X":"maketo100_alongx",\
+    "Make To 100 Along Y":"maketo100_alongy","Make To 100 List X":"maketo100_listx","Make To 100 List Y":"maketo100_listy"}
     IS_COMPONENT = None
     IS_NUM = None
     IS_COORD = None
@@ -529,6 +543,8 @@ class PlateOperations(wx.ScrolledWindow):
     def getRowFiringEvent(self,event):
         pass
 
+
+
     def on_operation_combobox_select(self,event,operationcombobox):
 
         if not self.GetParent().FindWindowByName("components").IS_CONFIGURED:
@@ -550,16 +566,16 @@ class PlateOperations(wx.ScrolledWindow):
         # Replace values of operations object 
         myobj.op = event.GetString()
         myobj.argdict = {}
-        print "Building Arguments",self.masterdict[event.GetString()]
+        myobj.component_dict = {}
         argcount = 0
         for arg in self.masterdict[event.GetString()]:
 
             if arg  == "Component":
-                newcombo = wx.ComboBox(self,-1,"",choices=self.component_frame_choices)
-
+                newcombo1 = PromptingComboBox(self,"",choices=self.component_frame_choices,rowposition=operationcombobox.rowposition)
+                self.Bind(wx.EVT_COMBOBOX,lambda event, caller=newcombo1,row=operationcombobox.rowposition,column=argcount :self.on_component_comobobox_select(event,caller,row,column),newcombo1 )
                 if self.po_sizer.GetItem(int(operationcombobox.rowposition)*10  + 2 + argcount ):
                     oldwindow = self.po_sizer.GetItem(int(operationcombobox.rowposition)*int(10) + int(2) + argcount).GetWindow()
-                    self.po_sizer.Replace(oldwindow , newcombo)
+                    self.po_sizer.Replace(oldwindow , newcombo1)
                     oldwindow.Destroy()
                     self.Layout()
 
@@ -570,12 +586,12 @@ class PlateOperations(wx.ScrolledWindow):
 
             elif arg == "Buffer":
                 print self.buffer_frame_choices
-                newcombo = wx.ComboBox(self,-1,"",choices=self.buffer_frame_choices)
-
+                newcombo2 = PromptingComboBox(self,"",choices=self.buffer_frame_choices,rowposition=operationcombobox.rowposition)
+                self.Bind(wx.EVT_COMBOBOX,lambda event, caller=newcombo2,row=operationcombobox.rowposition,column=argcount :self.on_component_comobobox_select(event,caller,row,column),newcombo2 )
                 if self.po_sizer.GetItem(int(operationcombobox.rowposition)*10  + 2 + argcount ):
                     print "replace called on posn %d column %d " % (int(operationcombobox.rowposition)*int(10) + int(2) + argcount,argcount )
                     oldwindow = self.po_sizer.GetItem(int(operationcombobox.rowposition)*int(10) + int(2) + argcount).GetWindow()
-                    self.po_sizer.Replace(oldwindow , newcombo)
+                    self.po_sizer.Replace(oldwindow , newcombo2)
                     oldwindow.Destroy()
                     self.Layout()
 
@@ -594,10 +610,17 @@ class PlateOperations(wx.ScrolledWindow):
                 self.po_sizer.Layout()
                 
             argcount = argcount + 1
+        event.Skip()
             
     def process_argument(self,event,caller,row):
         myobj = self.plate_operations[row]
         myobj.argdict[event.GetId()]= caller.GetValue()
+
+    def on_component_comobobox_select(self,event,caller,row,column):
+        print "aefrgaergfertqert",event.GetString(),caller,row
+        myobj = self.plate_operations[row]
+        myobj.component_dict[column] = event.GetString()
+        event.Skip()
 
     def add_operation(self,event):
         if self.GetParent().PLATE_CONFIGURED :
@@ -664,19 +687,75 @@ class PlateOperations(wx.ScrolledWindow):
                 self.masterdict[newchoice] = operations_array_element[1:]
 
     def make_plate(self,event):
+        scrfile = open("tmp.scr","w")
+        scrfile.write("#!/usr/bin/python\n")
+        scrfile.write("from gridder import masterplate,plate,component,buffercomponent\n")
+        scrfile.write("mp = masterplate.Masterplate(2000)\n")
+
+        myplate_setup = self.GetParent().FindWindowByName("platesetup").plate_setup_dict
+        for key in myplate_setup.keys():
+                com =  "p%s = plate.Plate(\"%s\",\"%s\",mp)\n" % ( key,myplate_setup[key][0],myplate_setup[key][1])
+                print com
+                scrfile.write(com)
+
+        comppanel = self.GetParent().FindWindowByName("components").all_solutionsdict
+        objdict = {}
+
+        for key in sorted(comppanel.keys()):
+            if key in self.GetParent().FindWindowByName("components").buffer_namedict.keys():
+                cargs = ""
+                cargs = ",".join(comppanel[key][1:])
+                com = "c%s = buffercomponent.SimpleBuffer(\"%s\" , %s)\n" % (key,comppanel[key][0],cargs)
+                print com
+                scrfile.write(com)
+                objdict[comppanel[key][0]] = "c%s " %  key
+            else:
+                cargs = ""
+                cargs = ",".join(comppanel[key][1:])
+                com = "c%s = component.Component(\"%s\" , %s)\n" % (key,comppanel[key][0],cargs)
+                print com
+                scrfile.write(com)
+                objdict[comppanel[key][0]] = "c%s " %  key
+
+        print self.plate_operations.keys()
+        
         for i in self.plate_operations.keys():
-            print i
+
             myobj = self.plate_operations[i]
-            print myobj.plate, myobj.op,myobj.argdict
-            
+            print myobj.argdict
+            argstring = "" 
+            args = ""
+            textentries = sorted(myobj.argdict.keys())
+            textentries.reverse()
+            for sorted_key in textentries:
+                argstring = argstring + myobj.argdict[sorted_key] + " "
+            args = ",".join(argstring.split())
+            component_keys = sorted(myobj.component_dict.keys())
+            cstring = ""
+            for sorted_component in component_keys:
+                cstring = cstring +  objdict[myobj.component_dict[sorted_component]] + " "
+            component_args = ",".join(cstring.split())
+            print "$$$$$$$$$$", component_args
+            com = "p%s.%s(%s,%s)\n" % (myobj.plate.split()[1],self.function_dict[myobj.op],component_args,args)
+            print com
+            scrfile.write(com)
+        scrfile.write("water = component.Component(\"100.00 % Water\",100,100000)\n")
+        scrfile.write("pwhole = plate.Plate(\"A1\",\"H12\",mp)\n")
+        scrfile.write("pwhole.fill_water(water)\n")
+        scrfile.write("mp.printwellinfo()\n")
+        scrfile.write("mp.makefileforformulatrix(\"test.dl.txt\")\n")
+        scrfile.write("mp.printpdf(\"test\")\n")
+        scrfile.close()
+        
 
 
 class OperationObject():
 
-    def __init__(self,op=None,plate=None,args={}):
+    def __init__(self,op=None,plate=None,args={},component_dict = {}):
         self.op = op
         self.plate = plate
         self.argdict =  args
+        self.component_dict = component_dict
         
 if __name__=="__main__":
     
