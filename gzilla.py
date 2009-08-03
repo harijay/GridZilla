@@ -12,8 +12,8 @@ import sys
 sys.path.append("/home/hari/gridder")
 
 class MaFrame(wx.Frame):
-    plates = []
-    components = []
+    plateobjects = []
+    componentobjects = []
     
     PLATE_CONFIGURED = False
     IS_BEGUN = True
@@ -44,14 +44,11 @@ class Validate_Plate_Coordinate(wx.PyValidator):
     def Validate(self,win):
         window =wxPyTypeCast(self.GetWindow(), "wxTextCtrl")
         text = window.GetValue()
-        print "GOT VAL %s" % text
         if len(text) == 0 or text=="":
             wx.MessageBox("Please enter a plate coordinate between A1 and H12: Empty Box")
-            print "FALSE EVAL reason empty "
             return False
         if text not in myplate.ordered_keys:
             wx.MessageBox("Please enter a plate coordinate between A1 and H12")
-            print "FALSE EVAL reason no key match "
             return False
         else:
             textctrl.Refresh()
@@ -71,7 +68,6 @@ class Validate_Plate_Coordinate(wx.PyValidator):
 class PlatePanel(wx.ScrolledWindow):
     num_subplates = 1
     ID_DELETE_PLATE = 111
-    subplate_array_sizers = []
     plate_customizer_dict = {1:("A1","H12"),2:("A1","D6","E1","H12"),3:("A1","","","","","H12"),4:("A1","D6","A7","D12","D1","H6","D7","H12")}
     
     def __init__(self,*args,**kwds):
@@ -202,6 +198,7 @@ class PlatePanel(wx.ScrolledWindow):
     
     def set_plate_config(self,event):
         from gridder.masterplate import Masterplate
+        # Servant plate object to check user input
         myplate = Masterplate(2000)
         scanned_plate_def = None
         # Local variable to identify plate corner
@@ -226,9 +223,9 @@ class PlatePanel(wx.ScrolledWindow):
                     self.GetParent().PLATE_CONFIGURED = False
                     break
                 else:
-                    if scanned_plate_def not in self.GetParent().plates:
-                        self.GetParent().plates.append(scanned_plate_def)
-                        print "Got value:%s" % child.GetValue()
+                    if scanned_plate_def not in self.GetParent().plateobjects:
+                        self.GetParent().plateobjects.append(scanned_plate_def)
+
             childcount = childcount + 1
             if childcount == max :
                 self.GetParent().PLATE_CONFIGURED = True
@@ -421,6 +418,7 @@ class  ComponentPanel(wx.ScrolledWindow):
                         print "Added buffer component num :  %d , Name : %s , Concentration : %s Volume : %s pH: %s  pKa : %s" % tuple([rownum] + itemvals)
             self.GetParent().FindWindowByName("plateop").make_component_choice_list()
             self.IS_CONFIGURED = True
+
 class PromptingComboBox(wx.ComboBox) :
     def __init__(self, parent, value, choices=[], style=0, rowposition=0,**par):
         wx.ComboBox.__init__(self, parent, wx.ID_ANY, value, style=style|wx.CB_DROPDOWN, choices=choices,**par)
@@ -430,7 +428,6 @@ class PromptingComboBox(wx.ComboBox) :
         self.Bind(wx.EVT_COMBOBOX, self.EvtCombobox)
         self.ignoreEvtText = False
         self.rowposition = rowposition
-        print "combobox inserted at rowposition %d" %(self.rowposition)
     
     def EvtCombobox(self, event):
         self.ignoreEvtText = True
@@ -509,7 +506,6 @@ class PlateOperations(wx.ScrolledWindow):
         self.po_sizer.FitInside(self)
     
     def refresh_plate_choice_comboboxes(self):
-        print "New plate added to Plate list, now number of plates is : %d" % len(self.platelist)
         i = 0
         for item in self.plate_combobox_objects:
             # Simply setting the combobox_object.choice to new choices did not do it
@@ -522,8 +518,13 @@ class PlateOperations(wx.ScrolledWindow):
            
 
     def on_plate_combobox_select(self,event,platecallercombobox):
-        print "selected plate combobox event %s %s from grid row %d" % (event.GetString(),event.GetId(),platecallercombobox.rowposition)
-        self.plate_operations[event.GetId()] = event.GetString()
+#        print "selected plate combobox event %s %s from grid row %d" % (event.GetString(),event.GetId(),platecallercombobox.rowposition)
+        if platecallercombobox.rowposition in self.plate_operations.keys():
+            myopobject = self.plate_operations[platecallercombobox.rowposition]
+        else:
+            myopobject = OperationObject()
+            self.plate_operations[platecallercombobox.rowposition] = myopobject 
+        myopobject.plate = event.GetString()
 
     def getRowFiringEvent(self,event):
         pass
@@ -533,7 +534,7 @@ class PlateOperations(wx.ScrolledWindow):
         if not self.GetParent().FindWindowByName("components").IS_CONFIGURED:
             self.make_component_choice_list()
 
-        print "selected Operation combobox event %s %s from rid row %d " % (event.GetString(),event.GetId(),operationcombobox.rowposition)
+#        print "selected Operation combobox event %s %s from rid row %d " % (event.GetString(),event.GetId(),operationcombobox.rowposition)
         for delcounter in range(2,10,1):
             oldwindow = self.po_sizer.GetItem(int(operationcombobox.rowposition)*int(10) + delcounter).GetWindow()
             dummypanel = wx.Panel(self,-1,size=(140,-1))
@@ -541,17 +542,22 @@ class PlateOperations(wx.ScrolledWindow):
             oldwindow.Destroy()
 
         mystring = event.GetString()
-        self.plate_operations[event.GetId()] = mystring
+        if operationcombobox.rowposition not in  self.plate_operations:
+            myobj = OperationObject()
+            self.plate_operations[operationcombobox.rowposition] = myobj
+        else:
+            myobj = self.plate_operations[operationcombobox.rowposition]
+        # Replace values of operations object 
+        myobj.op = event.GetString()
+        myobj.argdict = {}
         print "Building Arguments",self.masterdict[event.GetString()]
         argcount = 0
         for arg in self.masterdict[event.GetString()]:
 
             if arg  == "Component":
-                print "Inserting Component selector to row %d  column %d" % (operationcombobox.rowposition,argcount)
                 newcombo = wx.ComboBox(self,-1,"",choices=self.component_frame_choices)
 
                 if self.po_sizer.GetItem(int(operationcombobox.rowposition)*10  + 2 + argcount ):
-                    print "replace called on posn %d " % (int(operationcombobox.rowposition)*int(10) + int(2)  + argcount )
                     oldwindow = self.po_sizer.GetItem(int(operationcombobox.rowposition)*int(10) + int(2) + argcount).GetWindow()
                     self.po_sizer.Replace(oldwindow , newcombo)
                     oldwindow.Destroy()
@@ -559,12 +565,10 @@ class PlateOperations(wx.ScrolledWindow):
 
 
                 else:
-                    print " Fresh item insertion attempt"
                     self.po_sizer.Replace(int(operationcombobox.rowposition)*10 + int(2) + argcount, newcombo)
                     self.po_sizer.Layout()
 
             elif arg == "Buffer":
-                print "Inserting Buffer selector to row %d  , column %d" % (operationcombobox.rowposition,argcount)
                 print self.buffer_frame_choices
                 newcombo = wx.ComboBox(self,-1,"",choices=self.buffer_frame_choices)
 
@@ -582,14 +586,19 @@ class PlateOperations(wx.ScrolledWindow):
                     self.po_sizer.Layout()
 
             else:
-                newtextctrl = wx.TextCtrl(self,-1,"%s" % arg)
+                newtextctrl = wx.TextCtrl(self,-1,"%s" % arg,size=(200,-1))
+                newtextctrl.Bind(wx.EVT_TEXT,lambda event, caller=newtextctrl,row=operationcombobox.rowposition :self.process_argument(event,caller,row) )
                 oldwindow = self.po_sizer.GetItem(int(operationcombobox.rowposition)*int(10) + int(2) + argcount).GetWindow()
                 self.po_sizer.Replace(oldwindow , newtextctrl)
                 oldwindow.Destroy()
                 self.po_sizer.Layout()
                 
-            argcount = argcount + 1 
-    
+            argcount = argcount + 1
+            
+    def process_argument(self,event,caller,row):
+        myobj = self.plate_operations[row]
+        myobj.argdict[event.GetId()]= caller.GetValue()
+
     def add_operation(self,event):
         if self.GetParent().PLATE_CONFIGURED :
             if self.GetParent().FindWindowByName("components").IS_CONFIGURED:
@@ -598,7 +607,7 @@ class PlateOperations(wx.ScrolledWindow):
                 currentrowpos,currentcolpos  = self.po_sizer.CalcRowsCols()
                 new_platechoice_combobox = PromptingComboBox(self,"",choices=mynewchoice, style=wx.CB_SORT,rowposition=currentrowpos)
                 # Need to lambda the combobox so we can know which row the event came from
-                new_platechoice_combobox.Bind(wx.EVT_COMBOBOX,lambda event, platecallercombobox=new_platechoice_combobox : self.on_plate_combobox_select(event,platecallercombobox))
+                new_platechoice_combobox.Bind(wx.EVT_COMBOBOX,lambda event,platecallercombobox=new_platechoice_combobox : self.on_plate_combobox_select(event,platecallercombobox))
                 new_dispense_combobox = PromptingComboBox(self,"", choices=self.choices, style=wx.CB_SORT,size=(280,-1),rowposition=currentrowpos)
                 new_dispense_combobox.Bind(wx.EVT_COMBOBOX,lambda event,operationcombobox=new_dispense_combobox : self.on_operation_combobox_select(event,operationcombobox))
                 self.plate_combobox_objects.append(new_platechoice_combobox)
@@ -606,7 +615,7 @@ class PlateOperations(wx.ScrolledWindow):
                 self.po_sizer.Add(new_platechoice_combobox,1,wx.EXPAND|wx.ALIGN_CENTER)
                 self.po_sizer.Add(new_dispense_combobox,5,wx.EXPAND|wx.ALIGN_CENTER)
                 for i in range(8):
-                    dummypanel = wx.Panel(self,-1,size=(140,-1))
+                    dummypanel = wx.Panel(self,-1,size=(260,-1))
     #                dummypanel.SetBackgroundColour(wx.Colour(112,122,223))
                     self.po_sizer.Add(dummypanel,1,wx.EXPAND|wx.ALIGN_CENTER)
                 self.do_init_layout()
@@ -625,7 +634,7 @@ class PlateOperations(wx.ScrolledWindow):
     def make_plate_choicetxtlist(self):
         # Called by Other Class to create list used to setup comboboxes here
         if self.GetParent().PLATE_CONFIGURED:
-            self.platelist = self.GetParent().plates
+            self.platelist = self.GetParent().plateobjects
 
 #        print "SETTING BUTTON TO UNCLICKABLE " ,self.GetParent().FindWindowByName("platesetup").GetName()
 #        self.GetParent().FindWindowByName("platesetup").plate_add_button.Enable(False)
@@ -656,9 +665,19 @@ class PlateOperations(wx.ScrolledWindow):
 
     def make_plate(self,event):
         for i in self.plate_operations.keys():
-            print i , self.plate_operations[i]
+            print i
+            myobj = self.plate_operations[i]
+            print myobj.plate, myobj.op,myobj.argdict
+            
 
 
+class OperationObject():
+
+    def __init__(self,op=None,plate=None,args={}):
+        self.op = op
+        self.plate = plate
+        self.argdict =  args
+        
 if __name__=="__main__":
     
     app = wx.PySimpleApp()
