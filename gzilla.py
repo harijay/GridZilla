@@ -383,43 +383,44 @@ class  ComponentPanel(wx.ScrolledWindow):
 
 
     def set_components(self,event):
-        import re
-        spaces = re.compile("\s+")
-        rows,cols = self.top_grid_sizer.CalcRowsCols()
-        for rownum in range(2,rows,1):
-            if "Component" in self.top_grid_sizer.GetItem(rownum*cols + 0 ).GetWindow().GetLabel():
-                if (self.top_grid_sizer.GetItem(rownum*cols + 1 ).GetWindow().GetValue() or \
-                self.top_grid_sizer.GetItem(rownum*cols + 2 ).GetWindow().GetValue() or \
-                self.top_grid_sizer.GetItem(rownum*cols + 3 ).GetWindow().GetValue() ) == "":
-                    wx.MessageBox("Please Fill in all Component parameters")
-                else:
-                    itemvals = []
-                    for t in range(3):
-                        itemvals.append(self.top_grid_sizer.GetItem(rownum*cols + t + 1).GetWindow().GetValue())
-                    # component_namedict is keyed by component number(int) and has index 0 : Name, index 1: Conc, index 2: Volume
-                    print "Added component num :  %d , Name : %s , Concentration : %s Volume : %s " % tuple([rownum] + itemvals)
-                    self.component_namedict[rownum] = itemvals
-                    self.all_solutionsdict[rownum] = itemvals
+        if not self.IS_CONFIGURED:
+            import re
+            spaces = re.compile("\s+")
+            rows,cols = self.top_grid_sizer.CalcRowsCols()
+            for rownum in range(2,rows,1):
+                if "Component" in self.top_grid_sizer.GetItem(rownum*cols + 0 ).GetWindow().GetLabel():
+                    if (self.top_grid_sizer.GetItem(rownum*cols + 1 ).GetWindow().GetValue() or \
+                    self.top_grid_sizer.GetItem(rownum*cols + 2 ).GetWindow().GetValue() or \
+                    self.top_grid_sizer.GetItem(rownum*cols + 3 ).GetWindow().GetValue() ) == "":
+                        wx.MessageBox("Please Fill in all Component parameters")
+                    else:
+                        itemvals = []
+                        for t in range(3):
+                            itemvals.append(self.top_grid_sizer.GetItem(rownum*cols + t + 1).GetWindow().GetValue())
+                        # component_namedict is keyed by component number(int) and has index 0 : Name, index 1: Conc, index 2: Volume
+                        print "Added component num :  %d , Name : %s , Concentration : %s Volume : %s " % tuple([rownum] + itemvals)
+                        self.component_namedict[rownum] = itemvals
+                        self.all_solutionsdict[rownum] = itemvals
 
-            if "Buffer" in self.top_grid_sizer.GetItem(rownum*cols + 0 ).GetWindow().GetLabel():
-                if self.top_grid_sizer.GetItem(rownum*cols + 1 ).GetWindow().GetValue() == "" or \
-                self.top_grid_sizer.GetItem(rownum*cols + 2 ).GetWindow().GetValue() == "" or \
-                self.top_grid_sizer.GetItem(rownum*cols + 3 ).GetWindow().GetValue() == "" or \
-                self.top_grid_sizer.GetItem(rownum*cols + 4 ).GetWindow().GetValue() == "" or \
-                self.top_grid_sizer.GetItem(rownum*cols + 5 ).GetWindow().GetValue() == "":
-                    wx.MessageBox("Please Fill in all Buffer Parameters")
-                else:
-                    itemvals = []
-                    for t in  range(5):
-                        itemvals.append(self.top_grid_sizer.GetItem(rownum*cols + t + 1).GetWindow().GetValue())
-                        # component_namedict is keyed by component number(int) and has index 0 : Name, index 1: Conc, index 2: Volume , index 3 :pH , index 4 : pka
-                        # NOTE ROWNUMS are part of sequence and not separate i.e. keys here dont start at 0 and may not be sequential
-                    self.buffer_namedict[rownum] = itemvals
-                    self.all_solutionsdict[rownum] = itemvals
+                if "Buffer" in self.top_grid_sizer.GetItem(rownum*cols + 0 ).GetWindow().GetLabel():
+                    if self.top_grid_sizer.GetItem(rownum*cols + 1 ).GetWindow().GetValue() == "" or \
+                    self.top_grid_sizer.GetItem(rownum*cols + 2 ).GetWindow().GetValue() == "" or \
+                    self.top_grid_sizer.GetItem(rownum*cols + 3 ).GetWindow().GetValue() == "" or \
+                    self.top_grid_sizer.GetItem(rownum*cols + 4 ).GetWindow().GetValue() == "" or \
+                    self.top_grid_sizer.GetItem(rownum*cols + 5 ).GetWindow().GetValue() == "":
+                        wx.MessageBox("Please Fill in all Buffer Parameters")
+                    else:
+                        itemvals = []
+                        for t in  range(5):
+                            itemvals.append(self.top_grid_sizer.GetItem(rownum*cols + t + 1).GetWindow().GetValue())
+                            # component_namedict is keyed by component number(int) and has index 0 : Name, index 1: Conc, index 2: Volume , index 3 :pH , index 4 : pka
+                            # NOTE ROWNUMS are part of sequence and not separate i.e. keys here dont start at 0 and may not be sequential
+                        self.buffer_namedict[rownum] = itemvals
+                        self.all_solutionsdict[rownum] = itemvals
 
-                    print "Added buffer component num :  %d , Name : %s , Concentration : %s Volume : %s pH: %s  pKa : %s" % tuple([rownum] + itemvals)
-        self.GetParent().FindWindowByName("plateop").make_component_choice_list()
-        self.IS_CONFIGURED = True
+                        print "Added buffer component num :  %d , Name : %s , Concentration : %s Volume : %s pH: %s  pKa : %s" % tuple([rownum] + itemvals)
+            self.GetParent().FindWindowByName("plateop").make_component_choice_list()
+            self.IS_CONFIGURED = True
 class PromptingComboBox(wx.ComboBox) :
     def __init__(self, parent, value, choices=[], style=0, rowposition=0,**par):
         wx.ComboBox.__init__(self, parent, wx.ID_ANY, value, style=style|wx.CB_DROPDOWN, choices=choices,**par)
@@ -528,10 +529,17 @@ class PlateOperations(wx.ScrolledWindow):
         pass
 
     def on_operation_combobox_select(self,event,operationcombobox):
+
         if not self.GetParent().FindWindowByName("components").IS_CONFIGURED:
             self.make_component_choice_list()
 
         print "selected Operation combobox event %s %s from rid row %d " % (event.GetString(),event.GetId(),operationcombobox.rowposition)
+        for delcounter in range(2,10,1):
+            oldwindow = self.po_sizer.GetItem(int(operationcombobox.rowposition)*int(10) + delcounter).GetWindow()
+            dummypanel = wx.Panel(self,-1,size=(140,-1))
+            self.po_sizer.Replace(oldwindow ,dummypanel )
+            oldwindow.Destroy()
+
         mystring = event.GetString()
         self.plate_operations[event.GetId()] = mystring
         print "Building Arguments",self.masterdict[event.GetString()]
@@ -546,6 +554,7 @@ class PlateOperations(wx.ScrolledWindow):
                     print "replace called on posn %d " % (int(operationcombobox.rowposition)*int(10) + int(2)  + argcount )
                     oldwindow = self.po_sizer.GetItem(int(operationcombobox.rowposition)*int(10) + int(2) + argcount).GetWindow()
                     self.po_sizer.Replace(oldwindow , newcombo)
+                    oldwindow.Destroy()
                     self.Layout()
 
 
@@ -563,6 +572,7 @@ class PlateOperations(wx.ScrolledWindow):
                     print "replace called on posn %d column %d " % (int(operationcombobox.rowposition)*int(10) + int(2) + argcount,argcount )
                     oldwindow = self.po_sizer.GetItem(int(operationcombobox.rowposition)*int(10) + int(2) + argcount).GetWindow()
                     self.po_sizer.Replace(oldwindow , newcombo)
+                    oldwindow.Destroy()
                     self.Layout()
 
 
@@ -570,7 +580,14 @@ class PlateOperations(wx.ScrolledWindow):
                     print " Fresh item insertion attempt"
                     self.po_sizer.Replace(int(operationcombobox.rowposition)*10 + int(2) + argcount, newcombo)
                     self.po_sizer.Layout()
-           
+
+            else:
+                newtextctrl = wx.TextCtrl(self,-1,"%s" % arg)
+                oldwindow = self.po_sizer.GetItem(int(operationcombobox.rowposition)*int(10) + int(2) + argcount).GetWindow()
+                self.po_sizer.Replace(oldwindow , newtextctrl)
+                oldwindow.Destroy()
+                self.po_sizer.Layout()
+                
             argcount = argcount + 1 
     
     def add_operation(self,event):
