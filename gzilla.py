@@ -7,7 +7,7 @@ from wx._core import FindWindowByName
 import wx
 import wx.lib.scrolledpanel  as myscrolledpanel
 import wx.lib.inspection
-MYFRAMESIZE = (1100,500)
+MYFRAMESIZE = (1212,700)
 
 import sys
 sys.path.append("/home/hari/gridder")
@@ -386,45 +386,47 @@ class  ComponentPanel(wx.ScrolledWindow):
 
 
     def set_components(self,event):
-        if not self.IS_CONFIGURED:
-            import re
-            spaces = re.compile("\s+")
-            rows,cols = self.top_grid_sizer.CalcRowsCols()
-            for rownum in range(2,rows,1):
-                if "Component" in self.top_grid_sizer.GetItem(rownum*cols + 0 ).GetWindow().GetLabel():
-                    if (self.top_grid_sizer.GetItem(rownum*cols + 1 ).GetWindow().GetValue() or \
-                    self.top_grid_sizer.GetItem(rownum*cols + 2 ).GetWindow().GetValue() or \
-                    self.top_grid_sizer.GetItem(rownum*cols + 3 ).GetWindow().GetValue() ) == "":
-                        wx.MessageBox("Please Fill in all Component parameters")
-                    else:
-                        itemvals = []
-                        for t in range(3):
-                            itemvals.append(self.top_grid_sizer.GetItem(rownum*cols + t + 1).GetWindow().GetValue())
-                        # component_namedict is keyed by component number(int) and has index 0 : Name, index 1: Conc, index 2: Volume
-                        print "Added component num :  %d , Name : %s , Concentration : %s Volume : %s " % tuple([rownum] + itemvals)
+        import re
+        spaces = re.compile("\s+")
+        rows,cols = self.top_grid_sizer.CalcRowsCols()
+        for rownum in range(2,rows,1):
+            if "Component" in self.top_grid_sizer.GetItem(rownum*cols + 0 ).GetWindow().GetLabel():
+                if (self.top_grid_sizer.GetItem(rownum*cols + 1 ).GetWindow().GetValue() or \
+                self.top_grid_sizer.GetItem(rownum*cols + 2 ).GetWindow().GetValue() or \
+                self.top_grid_sizer.GetItem(rownum*cols + 3 ).GetWindow().GetValue() ) == "":
+                    wx.MessageBox("Please Fill in all Component parameters")
+                else:
+                    itemvals = []
+                    for t in range(3):
+                        itemvals.append(self.top_grid_sizer.GetItem(rownum*cols + t + 1).GetWindow().GetValue())
+                    # component_namedict is keyed by component number(int) and has index 0 : Name, index 1: Conc, index 2: Volume
+                    print "Added component num :  %d , Name : %s , Concentration : %s Volume : %s " % tuple([rownum] + itemvals)
 
-                        self.component_namedict[rownum] = itemvals
-                        self.all_solutionsdict[rownum] = itemvals
+                    self.component_namedict[rownum] = itemvals
+                    self.all_solutionsdict[rownum] = itemvals
 
-                if "Buffer" in self.top_grid_sizer.GetItem(rownum*cols + 0 ).GetWindow().GetLabel():
-                    if self.top_grid_sizer.GetItem(rownum*cols + 1 ).GetWindow().GetValue() == "" or \
-                    self.top_grid_sizer.GetItem(rownum*cols + 2 ).GetWindow().GetValue() == "" or \
-                    self.top_grid_sizer.GetItem(rownum*cols + 3 ).GetWindow().GetValue() == "" or \
-                    self.top_grid_sizer.GetItem(rownum*cols + 4 ).GetWindow().GetValue() == "" or \
-                    self.top_grid_sizer.GetItem(rownum*cols + 5 ).GetWindow().GetValue() == "":
-                        wx.MessageBox("Please Fill in all Buffer Parameters")
-                    else:
-                        itemvals = []
-                        for t in  range(5):
-                            itemvals.append(self.top_grid_sizer.GetItem(rownum*cols + t + 1).GetWindow().GetValue())
-                            # component_namedict is keyed by component number(int) and has index 0 : Name, index 1: Conc, index 2: Volume , index 3 :pH , index 4 : pka
-                            # NOTE ROWNUMS are part of sequence and not separate i.e. keys here dont start at 0 and may not be sequential
-                        self.buffer_namedict[rownum] = itemvals
-                        self.all_solutionsdict[rownum] = itemvals
+            if "Buffer" in self.top_grid_sizer.GetItem(rownum*cols + 0 ).GetWindow().GetLabel():
+                if self.top_grid_sizer.GetItem(rownum*cols + 1 ).GetWindow().GetValue() == "" or \
+                self.top_grid_sizer.GetItem(rownum*cols + 2 ).GetWindow().GetValue() == "" or \
+                self.top_grid_sizer.GetItem(rownum*cols + 3 ).GetWindow().GetValue() == "" or \
+                self.top_grid_sizer.GetItem(rownum*cols + 4 ).GetWindow().GetValue() == "" or \
+                self.top_grid_sizer.GetItem(rownum*cols + 5 ).GetWindow().GetValue() == "":
+                    wx.MessageBox("Please Fill in all Buffer Parameters")
+                else:
+                    itemvals = []
+                    for t in  range(5):
+                        itemvals.append(self.top_grid_sizer.GetItem(rownum*cols + t + 1).GetWindow().GetValue())
+                        # component_namedict is keyed by component number(int) and has index 0 : Name, index 1: Conc, index 2: Volume , index 3 :pH , index 4 : pka
+                        # NOTE ROWNUMS are part of sequence and not separate i.e. keys here dont start at 0 and may not be sequential
+                    self.buffer_namedict[rownum] = itemvals
+                    self.all_solutionsdict[rownum] = itemvals
 
 #                        print "Added buffer component num :  %d , Name : %s , Concentration : %s Volume : %s pH: %s  pKa : %s" % tuple([rownum] + itemvals)
-            self.GetParent().FindWindowByName("plateop").make_component_choice_list()
-            self.IS_CONFIGURED = True
+        self.GetParent().FindWindowByName("plateop").make_component_choice_list()
+        self.IS_CONFIGURED = True
+
+
+
 
 class PromptingComboBox(wx.ComboBox) :
     def __init__(self, parent, value, choices=[], style=0, rowposition=0,**par):
@@ -663,6 +665,8 @@ class PlateOperations(wx.ScrolledWindow):
 #        self.GetParent().FindWindowByName("platesetup").plate_add_button.Enable(False)
 
     def make_component_choice_list(self):
+        self.component_frame_choices = []
+        self.buffer_frame_choices = []
         try:
             for key in self.GetParent().FindWindowByName("components").all_solutionsdict:
                 self.component_frame_choices.append(self.GetParent().FindWindowByName("components").all_solutionsdict[key][0])
@@ -672,6 +676,20 @@ class PlateOperations(wx.ScrolledWindow):
             print "Something wrong , no generation of Component list or plate list possible at this time"
             if not self.GetParent().FindWindowByName("components").IS_CONFIGURED:
                 wx.MessageBox("Please configure components and retry")
+        # Refresh existing choice boxes
+        rows,cols = self.po_sizer.CalcRowsCols()
+
+        for row in range(1,rows,1):
+            for col in range(2,cols,1):
+                try:
+                    w = self.po_sizer.GetItem(row*cols + col).GetWindow()
+                    if isinstance(w,PromptingComboBox):
+                        w.Clear()
+                        w.SetItems(self.component_frame_choices)
+                except Exception , e:
+                    print "Nothing to Refresh"
+
+
 
 
     def make_choice_list(self):
@@ -690,7 +708,7 @@ class PlateOperations(wx.ScrolledWindow):
         scrfile = open("tmp.scr","w")
         scrfile.write("#!/usr/bin/python\n")
         scrfile.write("from gridder import masterplate,plate,component,buffercomponent\n")
-        scrfile.write("mp = masterplate.Masterplate(2000)\n")
+        scrfile.write("mp = masterplate.Masterplate(%s)\n" % self.GetParent().FindWindowByName("mpanel").volttc.GetValue())
 
         myplate_setup = self.GetParent().FindWindowByName("platesetup").plate_setup_dict
         for key in myplate_setup.keys():
@@ -743,10 +761,33 @@ class PlateOperations(wx.ScrolledWindow):
         scrfile.write("pwhole = plate.Plate(\"A1\",\"H12\",mp)\n")
         scrfile.write("pwhole.fill_water(water)\n")
         scrfile.write("mp.printwellinfo()\n")
-        scrfile.write("mp.makefileforformulatrix(\"test.dl.txt\")\n")
-        scrfile.write("mp.printpdf(\"test\")\n")
+        scrfile.write("mp.makefileforformulatrix(\"%s.dl.txt\")\n" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())
+        scrfile.write("mp.printpdf(\"%s\")\n" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())
         scrfile.close()
+        execfile("tmp.scr")
+
+
+    
+
+
         
+class MpPanel(wx.ScrolledWindow):
+
+    def __init__(self,*args,**kwds):
+        wx.ScrolledWindow.__init__(self,*args,**kwds)
+        kwds["size"] = MYFRAMESIZE
+        self.platevol_label = wx.StaticText(self,-1,"Plate Volume")
+        self.volttc = wx.TextCtrl(self,-1,"2000")
+        self.filenamelabel = wx.StaticText(self,-1,"Dispense file prefix")
+        self.file_name_text = wx.TextCtrl(self,-1,"test")
+        self.szr = wx.FlexGridSizer(2,2,10,10)
+        self.szr.Add(self.platevol_label)
+        self.szr.Add(self.volttc)
+        self.szr.Add(self.filenamelabel)
+        self.szr.Add(self.file_name_text)
+        self.SetSizer(self.szr)
+        self.szr.FitInside(self)
+        self.Layout()
 
 
 class OperationObject():
@@ -767,6 +808,8 @@ if __name__=="__main__":
     maframe.GetSizer().Add(component_panel,4,wx.ALIGN_BOTTOM|wx.EXPAND)
     plateoperations = PlateOperations(parent=maframe,name="plateop")
     maframe.GetSizer().Add(plateoperations,4,wx.ALIGN_BOTTOM|wx.EXPAND)
+    holistic = MpPanel(maframe,name="mpanel")
+    maframe.GetSizer().Add(holistic,1,wx.EXPAND)
     maframe.Layout()
     maframe.Show()
     # Debug using this tool
