@@ -193,7 +193,10 @@ class PlatePanel(wx.ScrolledWindow):
         wx.EVT_MENU(self,self.ID_DELETE_PLATE,delete_component(caller))
 
         
- 
+    def display_change_warning(self,event):
+        msg = wx.MessageBox("Please Click on COnfigure to propagate changes")
+        msg.Show()
+        event.Skip()
         
     
     def set_plate_config(self,event):
@@ -236,9 +239,12 @@ class PlatePanel(wx.ScrolledWindow):
         rows,cols = self.master_sizer.CalcRowsCols()
         for row in range(1,rows,1):
 #                print "p%s = plate.Plate(\"%s\",\"%s\")" % ( row,self.master_sizer.GetItem(cols*row + 1).GetWindow().GetValue() , self.master_sizer.GetItem(cols*row + 2).GetWindow().GetValue())
-                self.plate_setup_dict[row] = [self.master_sizer.GetItem(cols*row + 1).GetWindow().GetValue(),self.master_sizer.GetItem(cols*row + 2).GetWindow().GetValue()]
+            win1 = self.master_sizer.GetItem(cols*row + 1).GetWindow()
+            win2 = self.master_sizer.GetItem(cols*row + 2).GetWindow()
+            self.plate_setup_dict[row] = [win1.GetValue(),win2.GetValue()]
+            win1.Bind(wx.EVT_TEXT,self.display_change_warning)
+            win2.Bind(wx.EVT_TEXT,self.display_change_warning)
 
-        
         event.Skip()
 
 
@@ -254,6 +260,7 @@ class  ComponentPanel(wx.ScrolledWindow):
     buffer_namedict = {}
     all_solutionsdict = {}
     IS_CONFIGURED = False
+    change_logger = []
 
     def __init__(self,*args, **kwds):
         kwds["size"] = MYFRAMESIZE
@@ -384,6 +391,13 @@ class  ComponentPanel(wx.ScrolledWindow):
     def is_valid_component(self,array_of_vals):
         pass
 
+    def display_change_warning(self,event):
+        if event.GetId() not in self.change_logger:
+            msg = wx.MessageBox("Please Configure Components and then check all operations to synchronize changes")
+            self.change_logger.append(event.GetId())
+            event.Skip()
+        else:
+            event.Skip()
 
     def set_components(self,event):
         import re
@@ -398,7 +412,10 @@ class  ComponentPanel(wx.ScrolledWindow):
                 else:
                     itemvals = []
                     for t in range(3):
-                        itemvals.append(self.top_grid_sizer.GetItem(rownum*cols + t + 1).GetWindow().GetValue())
+                        win = self.top_grid_sizer.GetItem(rownum*cols + t + 1).GetWindow()
+                        itemvals.append(win.GetValue())
+                        win.Bind(wx.EVT_TEXT,self.display_change_warning)
+
                     # component_namedict is keyed by component number(int) and has index 0 : Name, index 1: Conc, index 2: Volume
                     print "Added component num :  %d , Name : %s , Concentration : %s Volume : %s " % tuple([rownum] + itemvals)
 
@@ -479,7 +496,7 @@ class PlateOperations(wx.ScrolledWindow):
     IS_COMPONENT = None
     IS_NUM = None
     IS_COORD = None
-    operations_file_name = u"operations.csv"
+    operations_file_name = u"./operations.csv"
     choices = []
     plate_combobox_objects = []
     dispense_choice_boxlist = []
@@ -648,7 +665,7 @@ class PlateOperations(wx.ScrolledWindow):
                 for item in self.plate_combobox_objects:
                     self.plate_id_mapper_dict[item.GetId()] = item.rowposition
             else:
-                wx.MessageBox("No Plates: Please Configure components and then add operations")
+                wx.MessageBox("No Components: Please Configure components and then add operations")
         else:
             wx.MessageBox("No Plates: Please Set Plate COnfig and then try")
 
@@ -705,7 +722,7 @@ class PlateOperations(wx.ScrolledWindow):
                 self.masterdict[newchoice] = operations_array_element[1:]
 
     def make_plate(self,event):
-        scrfile = open("tmp.scr","w")
+        scrfile = open("%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()),"w")  
         scrfile.write("#!/usr/bin/python\n")
         scrfile.write("from gridder import masterplate,plate,component,buffercomponent\n")
         scrfile.write("mp = masterplate.Masterplate(%s)\n" % self.GetParent().FindWindowByName("mpanel").volttc.GetValue())
@@ -762,9 +779,10 @@ class PlateOperations(wx.ScrolledWindow):
         scrfile.write("pwhole.fill_water(water)\n")
         scrfile.write("mp.printwellinfo()\n")
         scrfile.write("mp.makefileforformulatrix(\"%s.dl.txt\")\n" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())
-        scrfile.write("mp.printpdf(\"%s\")\n" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())
+        scrfile.write("mp.printpdfhuman(\"%s\")\n" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())
+        scrfile.write("mp.printpdf(\"%s_volumes\")\n" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())
         scrfile.close()
-        execfile("tmp.scr")
+        execfile("%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())) 
 
 
     
@@ -813,5 +831,5 @@ if __name__=="__main__":
     maframe.Layout()
     maframe.Show()
     # Debug using this tool
-    wx.lib.inspection.InspectionTool().Show()
+#    wx.lib.inspection.InspectionTool().Show()
     app.MainLoop()
