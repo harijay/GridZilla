@@ -195,7 +195,6 @@ class PlatePanel(wx.ScrolledWindow):
         
     def display_change_warning(self,event):
         msg = wx.MessageBox("Please Click on COnfigure to propagate changes")
-        msg.Show()
         event.Skip()
         
     
@@ -761,6 +760,7 @@ class PlateOperations(wx.ScrolledWindow):
             argstring = "" 
             args = ""
             textentries = sorted(myobj.argdict.keys())
+            # Since event keys are negative numbers , to preserve argument order for functions we reverse the keys
             textentries.reverse()
             for sorted_key in textentries:
                 argstring = argstring + myobj.argdict[sorted_key] + " "
@@ -774,9 +774,24 @@ class PlateOperations(wx.ScrolledWindow):
             com = "p%s.%s(%s,%s)\n" % (myobj.plate.split()[1],self.function_dict[myobj.op],component_args,args)
             print com
             scrfile.write(com)
+
+        # Add the water Component to each script
         scrfile.write("water = component.Component(\"100.00 % Water\",100,100000)\n")
-        scrfile.write("pwhole = plate.Plate(\"A1\",\"H12\",mp)\n")
-        scrfile.write("pwhole.fill_water(water)\n")
+        for i in self.plate_operations.keys():
+            added_water = []
+            myobj = self.plate_operations[i]
+            if myobj not in added_water:
+                scrfile.write("p%s.fill_water(water)\n" % myobj.plate.split()[1])
+                added_water.append(myobj)
+            else:
+                pass
+#                print "filled water into" , added_water
+
+
+
+##        scrfile.write("water = component.Component(\"100.00 % Water\",100,100000)\n")
+#        scrfile.write("pwhole = plate.Plate(\"A1\",\"H12\",mp)\n")
+#        scrfile.write("pwhole.fill_water(water)\n")
         scrfile.write("mp.printwellinfo()\n")
         scrfile.write("mp.makefileforformulatrix(\"%s.dl.txt\")\n" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())
         scrfile.write("mp.printpdfhuman(\"%s\")\n" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())
