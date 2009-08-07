@@ -70,7 +70,7 @@ class PlatePanel(wx.ScrolledWindow):
     num_subplates = 1
     ID_DELETE_PLATE = 111
     plate_customizer_dict = {1:("A1","H12"),2:("A1","D6","E1","H12"),3:("A1","","","","","H12"),4:("A1","D6","A7","D12","E1","H6","E7","H12")}
-    
+    change_logger = []
     def __init__(self,*args,**kwds):
         kwds["size"] = MYFRAMESIZE
         wx.ScrolledWindow.__init__(self,*args,**kwds)
@@ -194,8 +194,12 @@ class PlatePanel(wx.ScrolledWindow):
 
         
     def display_change_warning(self,event):
-        msg = wx.MessageBox("Please Click on COnfigure to propagate changes")
-        event.Skip()
+        if event.GetId() not in self.change_logger:
+            msg = wx.MessageBox("Please Configure Plates and then check configure to propagate changes")
+            self.change_logger.append(event.GetId())
+            event.Skip()
+        else:
+            event.Skip()
         
     
     def set_plate_config(self,event):
@@ -495,7 +499,7 @@ class PlateOperations(wx.ScrolledWindow):
     IS_COMPONENT = None
     IS_NUM = None
     IS_COORD = None
-    operations_file_name = u"./operations.csv"
+   
     choices = []
     plate_combobox_objects = []
     dispense_choice_boxlist = []
@@ -509,11 +513,17 @@ class PlateOperations(wx.ScrolledWindow):
     # plate_id_mapper_dict maps plate components to their row positions
     plate_id_mapper_dict = {}
     def __init__(self,*args,**kwds):
+        import os
         wx.ScrolledWindow.__init__(self,*args,**kwds)
         kwds["size"] = MYFRAMESIZE
         self.add_op_button = wx.Button(self,label="Add Operation")
         self.make_plate_button = wx.Button(self,label="Make Plate")
-
+        self.operations_file_name = None
+        try:
+            self.operations_file_name =  str(os.path.join(os.environ["GZILLADIR"],"operations.csv"))
+            print "FOUND FOIND %s" % self.operations_file_name
+        except KeyError , k:
+            print "Cannot find operations file . Please setup environment variable GZILLADIR to point to location of operations.csv"
         self.Bind(wx.EVT_BUTTON,self.add_operation,self.add_op_button)
         self.Bind(wx.EVT_BUTTON,self.make_plate,self.make_plate_button)
 
@@ -711,9 +721,17 @@ class PlateOperations(wx.ScrolledWindow):
     def make_choice_list(self):
         import csv
         self.dispense_choice_boxlist = []
-        self.operations_file = open(self.operations_file_name, "r")
-        csvreader_object = csv.reader(self.operations_file,dialect=csv)
-        for operations_array_element in csvreader_object:
+        self.operations_file = None
+        self.csvreader_object = None
+        import os
+        for i in os.environ.keys():
+            print i , os.environ[i]
+        try :
+            self.operations_file = open(str(self.operations_file_name), "r")
+            self.csvreader_object = csv.reader(self.operations_file,dialect=csv)
+        except IOError , e:
+            wx.MessageBox("operations.csv file not found")
+        for operations_array_element in self.csvreader_object:
             newchoice = operations_array_element[0]
             # Comments in file have # as first character and are ignored
             if newchoice[0] != "#":
