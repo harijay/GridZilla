@@ -739,7 +739,8 @@ class PlateOperations(wx.ScrolledWindow):
                 self.masterdict[newchoice] = operations_array_element[1:]
 
     def make_plate(self,event):
-        scrfile = open("%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()),"w")  
+        import os
+        scrfile = open(os.path.join(os.environ["HOME"],"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())),"w")
         scrfile.write("#!/usr/bin/python\n")
         scrfile.write("from gridder import masterplate,plate,component,buffercomponent\n")
         scrfile.write("mp = masterplate.Masterplate(%s)\n" % self.GetParent().FindWindowByName("mpanel").volttc.GetValue())
@@ -811,11 +812,11 @@ class PlateOperations(wx.ScrolledWindow):
 #        scrfile.write("pwhole = plate.Plate(\"A1\",\"H12\",mp)\n")
 #        scrfile.write("pwhole.fill_water(water)\n")
         scrfile.write("mp.printwellinfo()\n")
-        scrfile.write("mp.makefileforformulatrix(\"%s.dl.txt\")\n" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())
-        scrfile.write("mp.printpdfhuman(\"%s\")\n" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())
-        scrfile.write("mp.printpdf(\"%s_volumes\")\n" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())
+        scrfile.write("mp.makefileforformulatrix(%s)\n" % os.path.join(os.environ["HOME"],"%s.dl.txt" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))
+        scrfile.write("mp.printpdfhuman(\"%s\")\n" % os.path.join(os.environ["HOME"],"%s.dl.txt" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))
+        scrfile.write("mp.printpdf(\"%s\")\n" % (os.path.join(os.environ["HOME"],"%s_volumes" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
         scrfile.close()
-        execfile("%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())) 
+        execfile(os.path.join(os.environ["HOME"],"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
 
 
     
