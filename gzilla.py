@@ -70,7 +70,7 @@ class Validate_Plate_Coordinate(wx.PyValidator):
 class PlatePanel(wx.ScrolledWindow):
     num_subplates = 1
     ID_DELETE_PLATE = 111
-    plate_customizer_dict = {1:("A1","H12"),2:("A1","D6","E1","H12"),3:("A1","","","","","H12"),4:("A1","D6","A7","D12","E1","H6","E7","H12")}
+    plate_customizer_dict = {1:("A1","H12"),2:("A1","D12","E1","H12"),3:("A1","","","","","H12"),4:("A1","D6","A7","D12","E1","H6","E7","H12")}
     change_logger = []
     def __init__(self,*args,**kwds):
         kwds["size"] = MYFRAMESIZE
