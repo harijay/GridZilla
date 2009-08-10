@@ -3,6 +3,7 @@
 # and open the template in the editor.
 
 
+
 from wx._core import FindWindowByName
 import wx
 import wx.lib.scrolledpanel  as myscrolledpanel
@@ -10,7 +11,7 @@ import wx.lib.inspection
 MYFRAMESIZE = (1212,700)
 
 import sys
-sys.path.append("/home/hari/gridder")
+
 
 class MaFrame(wx.Frame):
     plateobjects = []
@@ -496,6 +497,9 @@ class PlateOperations(wx.ScrolledWindow):
     "Component To Multiple Columns":"push_component_columnlist","Buffer pH Gradient Along X":"ph_gradient_alongx","Buffer pH Gradient Along Y":"ph_gradient_alongy",\
     "Buffer pH List Along X":"ph_list_alongx","Buffer pH List Along Y":"ph_list_alongy","Make To 100 Along X":"maketo100_alongx",\
     "Make To 100 Along Y":"maketo100_alongy","Make To 100 List X":"maketo100_listx","Make To 100 List Y":"maketo100_listy"}
+    masterdict = {'Gradient List Along X': ['Component', 'LISTVALS'], 'Gradient List Along Y': ['Component', 'LISTVALS'], 'Make To 100 Along X': ['Component', 'Component', 'FinalConc', 'FinalConcStartComponent1', 'FinalConcStopComponent1'], 'Make To 100 Along Y': ['Component', 'Component', 'FinalConc', 'FinalConcStartComponent1', 'FinalConcStopComponent1'], 'Add To Entire Plate': ['Component', 'FinalConc'], 'Make To 100 List X': ['Component', 'Component', 'FinalConc', 'LISTVALS'], 'Add To Column': ['Component', 'FinalConc', 'NUM'], 'Buffer pH List Along Y': ['Buffer', 'Buffer', 'FinalConc', 'LISTVALS'], 'Buffer pH List Along X': ['Buffer', 'Buffer', 'FinalConc', 'LISTVALS'], 'Add To Row': ['Component', 'FinalConc', 'ALPHA'], 'Buffer pH Gradient Along Y': ['Buffer', 'Buffer', 'FinalConc', 'pHSTART', 'pHSTOP'], 'Buffer pH Gradient Along X': ['Buffer', 'Buffer', 'FinalConc', 'pHSTART', 'pHSTOP'], 'Component To Multiple Rows': ['Component', 'FinalConc', 'LISTROWS'], 'Component To Multiple Columns': ['Component', 'FinalConc', 'LISTCOLS'], 'Make To 100 List Y': ['Component', 'Component', 'FinalConc', 'LISTVALS'], 'Gradient Along Y': ['Component', 'FinalConcStart', 'FinalConcStop'], 'Gradient Along X': ['Component', 'FinalConcStart', 'FinalConcStop']}
+
+
     IS_COMPONENT = None
     IS_NUM = None
     IS_COORD = None
@@ -504,7 +508,6 @@ class PlateOperations(wx.ScrolledWindow):
     plate_combobox_objects = []
     dispense_choice_boxlist = []
     platelist = []
-    masterdict = {}
     plate_operations = {}
     # Combobox choices populated by events that propagate from above
     component_frame_choices = []
@@ -518,12 +521,6 @@ class PlateOperations(wx.ScrolledWindow):
         kwds["size"] = MYFRAMESIZE
         self.add_op_button = wx.Button(self,label="Add Operation")
         self.make_plate_button = wx.Button(self,label="Make Plate")
-        self.operations_file_name = None
-        try:
-            self.operations_file_name =  str(os.path.join(os.environ["GZILLADIR"],"operations.csv"))
-            print "FOUND FOIND %s" % self.operations_file_name
-        except KeyError , k:
-            print "Cannot find operations file . Please setup environment variable GZILLADIR to point to location of operations.csv"
         self.Bind(wx.EVT_BUTTON,self.add_operation,self.add_op_button)
         self.Bind(wx.EVT_BUTTON,self.make_plate,self.make_plate_button)
 
@@ -719,28 +716,25 @@ class PlateOperations(wx.ScrolledWindow):
 
 
     def make_choice_list(self):
-        import csv
         self.dispense_choice_boxlist = []
-        self.operations_file = None
-        self.csvreader_object = None
-        import os
-        for i in os.environ.keys():
-            print i , os.environ[i]
-        try :
-            self.operations_file = open(str(self.operations_file_name), "r")
-            self.csvreader_object = csv.reader(self.operations_file,dialect=csv)
-        except IOError , e:
-            wx.MessageBox("operations.csv file not found")
-        for operations_array_element in self.csvreader_object:
-            newchoice = operations_array_element[0]
-            # Comments in file have # as first character and are ignored
-            if newchoice[0] != "#":
-                self.choices.append(newchoice)
-                self.masterdict[newchoice] = operations_array_element[1:]
+        sorted_keys = self.masterdict.keys()
+        sorted_keys.sort()
+        for key in sorted_keys:
+            self.choices.append(key)
+
 
     def make_plate(self,event):
         import os
-        scrfile = open(os.path.join(os.environ["HOME"],"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())),"w")
+        scrfile = None
+        try :
+            scrfile = open(os.path.join(os.environ["HOME"],"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())),"w")
+            print "ALL OUTPUT TO DIR %s" % os.environ["HOME"]
+        except KeyError , k :
+            print "Not Linux/Mac I see"
+            os.environ["HOME"] = os.path.join(os.environ["HOMEDRIVE"],os.environ["HOMEPATH"])
+            scrfile = open(os.path.join(os.environ["HOME"],"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())),"w")
+            print "ALL OUTPUT TO DIR %s" % os.environ["HOME"]
+
         scrfile.write("#!/usr/bin/python\n")
         scrfile.write("from gridder import masterplate,plate,component,buffercomponent\n")
         scrfile.write("mp = masterplate.Masterplate(%s)\n" % self.GetParent().FindWindowByName("mpanel").volttc.GetValue())
@@ -796,12 +790,12 @@ class PlateOperations(wx.ScrolledWindow):
 
         # Add the water Component to each script
         scrfile.write("water = component.Component(\"100.00 % Water\",100,100000)\n")
+        added_water = []
         for i in self.plate_operations.keys():
-            added_water = []
             myobj = self.plate_operations[i]
-            if myobj not in added_water:
+            if myobj.plate not in added_water:
                 scrfile.write("p%s.fill_water(water)\n" % myobj.plate.split()[1])
-                added_water.append(myobj)
+                added_water.append(myobj.plate)
             else:
                 pass
 #                print "filled water into" , added_water
@@ -812,9 +806,13 @@ class PlateOperations(wx.ScrolledWindow):
 #        scrfile.write("pwhole = plate.Plate(\"A1\",\"H12\",mp)\n")
 #        scrfile.write("pwhole.fill_water(water)\n")
         scrfile.write("mp.printwellinfo()\n")
-        scrfile.write("mp.makefileforformulatrix(%s)\n" % os.path.join(os.environ["HOME"],"%s.dl.txt" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))
-        scrfile.write("mp.printpdfhuman(\"%s\")\n" % os.path.join(os.environ["HOME"],"%s.dl.txt" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))
-        scrfile.write("mp.printpdf(\"%s\")\n" % (os.path.join(os.environ["HOME"],"%s_volumes" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
+        scrfile.write("mp.makefileforformulatrix(\"%s\")\n" % str(os.path.join(os.environ["HOME"],"%s.dl.txt" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
+        print "DISPENSE LIST OUTPUT to %s" % str(os.path.join(os.environ["HOME"],"%s.dl.txt" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))
+        scrfile.write("mp.printpdfhuman(\"%s\")\n" % str(os.path.join(os.environ["HOME"],"%s" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
+        print "PDF FILE OUTPUT TO %s" % str(os.path.join(os.environ["HOME"],"%s" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))
+
+        scrfile.write("mp.printpdf(\"%s\")\n" % str((os.path.join(os.environ["HOME"],"%s_volumes" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))))
+
         scrfile.close()
         execfile(os.path.join(os.environ["HOME"],"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
 
