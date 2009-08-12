@@ -806,12 +806,12 @@ class PlateOperations(wx.ScrolledWindow):
 #        scrfile.write("pwhole = plate.Plate(\"A1\",\"H12\",mp)\n")
 #        scrfile.write("pwhole.fill_water(water)\n")
         scrfile.write("mp.printwellinfo()\n")
-        scrfile.write("mp.makefileforformulatrix(\"%s\")\n" % str(os.path.join(os.environ["HOME"],"%s.dl.txt" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
+        scrfile.write("mp.makefileforformulatrix(r\"%s\")\n" % str(os.path.join(os.environ["HOME"],"%s.dl.txt" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
         print "DISPENSE LIST OUTPUT to %s" % str(os.path.join(os.environ["HOME"],"%s.dl.txt" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))
-        scrfile.write("mp.printpdfhuman(\"%s\")\n" % str(os.path.join(os.environ["HOME"],"%s" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
+        scrfile.write("mp.printpdfhuman(r\"%s\")\n" % str(os.path.join(os.environ["HOME"],"%s" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
         print "PDF FILE OUTPUT TO %s" % str(os.path.join(os.environ["HOME"],"%s" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))
 
-        scrfile.write("mp.printpdf(\"%s\")\n" % str((os.path.join(os.environ["HOME"],"%s_volumes" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))))
+        scrfile.write("mp.printpdf(r\"%s\")\n" % str((os.path.join(os.environ["HOME"],"%s_volumes" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))))
 
         scrfile.close()
         execfile(os.path.join(os.environ["HOME"],"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
