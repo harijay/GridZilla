@@ -1,3 +1,4 @@
+import os.path
 #!/usr/bin/python
 # To change this template, choose Tools | Templates
 # and open the template in the editor.
@@ -512,6 +513,7 @@ class PlateOperations(wx.ScrolledWindow):
     # Combobox choices populated by events that propagate from above
     component_frame_choices = []
     buffer_frame_choices = []
+    dirtowriteto = None
 
     # plate_id_mapper_dict maps plate components to their row positions
     plate_id_mapper_dict = {}
@@ -707,8 +709,18 @@ class PlateOperations(wx.ScrolledWindow):
                 try:
                     w = self.po_sizer.GetItem(row*cols + col).GetWindow()
                     if isinstance(w,PromptingComboBox):
+                        selected = None
+                        try :
+                            selected = w.GetValue()
+                        except :
+                            selected = ""
+                            pass
                         w.Clear()
                         w.SetItems(self.component_frame_choices)
+                        if selected in self.component_frame_choices:
+                            w.SetValue(selected)
+                        else:
+                            w.SetValue("")
                 except Exception , e:
                     print "Nothing to Refresh"
 
@@ -725,15 +737,30 @@ class PlateOperations(wx.ScrolledWindow):
 
     def make_plate(self,event):
         import os
+        from gridder import plateliberror
         scrfile = None
         try :
-            scrfile = open(os.path.join(os.environ["HOME"],"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())),"w")
-            print "ALL OUTPUT TO DIR %s" % os.environ["HOME"]
+            if self.dirtowriteto == None :
+                if os.environ.has_key("HOME"):
+                    adialog = wx.DirDialog(self,message="Directory for dispense files",defaultPath=os.environ["HOME"])
+                    adialog.ShowModal()
+                    print "getting dialog"
+                    self.dirtowriteto = adialog.GetPath()
+                    print "ALL OUTPUT TO DIR %s" % self.dirtowriteto
+                    scrfile = open(os.path.join(self.dirtowriteto ,"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())),"w")
+                else:
+                    adialog = wx.DirDialog(self,message="Directory for dispense files",defaultPath=os.path.join(os.environ["HOMEDRIVE"],os.environ["HOMEPATH"]))
+                    adialog.ShowModal()
+                    print "getting dialog"
+                    self.dirtowriteto = adialog.GetPath()
+                    print "ALL OUTPUT TO DIR %s" % self.dirtowriteto
+                    scrfile = open(os.path.join(self.dirtowriteto ,"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())),"w")
+            else :
+                scrfile = open(os.path.join(self.dirtowriteto ,"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())),"w")
+            
         except KeyError , k :
-            print "Not Linux/Mac I see"
-            os.environ["HOME"] = os.path.join(os.environ["HOMEDRIVE"],os.environ["HOMEPATH"])
-            scrfile = open(os.path.join(os.environ["HOME"],"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())),"w")
-            print "ALL OUTPUT TO DIR %s" % os.environ["HOME"]
+            print "Not Linux/Mac/Windows I see"
+            pass
 
         scrfile.write("#!/usr/bin/python\n")
         scrfile.write("from gridder import masterplate,plate,component,buffercomponent\n")
@@ -806,15 +833,21 @@ class PlateOperations(wx.ScrolledWindow):
 #        scrfile.write("pwhole = plate.Plate(\"A1\",\"H12\",mp)\n")
 #        scrfile.write("pwhole.fill_water(water)\n")
         scrfile.write("mp.printwellinfo()\n")
-        scrfile.write("mp.makefileforformulatrix(r\"%s\")\n" % str(os.path.join(os.environ["HOME"],"%s.dl.txt" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
-        print "DISPENSE LIST OUTPUT to %s" % str(os.path.join(os.environ["HOME"],"%s.dl.txt" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))
-        scrfile.write("mp.printpdfhuman(r\"%s\")\n" % str(os.path.join(os.environ["HOME"],"%s" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
-        print "PDF FILE OUTPUT TO %s" % str(os.path.join(os.environ["HOME"],"%s" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))
+        scrfile.write("mp.makefileforformulatrix(r\"%s\")\n" % str(os.path.join(self.dirtowriteto,"%s.dl.txt" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
+        scrfile.write("mp.printpdfhuman(r\"%s\")\n" % str(os.path.join(self.dirtowriteto,"%s" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
 
-        scrfile.write("mp.printpdf(r\"%s\")\n" % str((os.path.join(os.environ["HOME"],"%s_volumes" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))))
+
+        scrfile.write("mp.printpdf(r\"%s\")\n" % str((os.path.join(self.dirtowriteto,"%s_volumes" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))))
 
         scrfile.close()
-        execfile(os.path.join(os.environ["HOME"],"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
+        try:
+            execfile(os.path.join(self.dirtowriteto,"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
+            self.GetParent().GetStatusBar().SetStatusText("DISPENSE LIST %s OUTPUT  " % str(os.path.join(self.dirtowriteto,"%s.dl.txt" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
+            self.GetParent().GetStatusBar().SetStatusText("FILES OUTPUT with prefix %s" % str(os.path.join(self.dirtowriteto,"%s" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
+            self.GetParent().GetStatusBar().SetBackgroundColour(wx.Colour(204,255,204))
+        except plateliberror.PlatelibException , p :
+            self.GetParent().GetStatusBar().SetBackgroundColour(wx.Colour(255,204,153))
+            self.GetParent().GetStatusBar().SetStatusText(p.message)
 
 
     
