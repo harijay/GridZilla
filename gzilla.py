@@ -34,16 +34,17 @@ class MaFrame(wx.Frame):
 #        self.Fit()
 
 class Validate_Plate_Coordinate(wx.PyValidator):
-    from gridder import masterplate
-    from gridder.masterplate import Masterplate
-    myplate = Masterplate(2000)
-    
-    def __init__(self):
+
+
+    def __init__(self,style):
+        from gridder import masterplate
+        from gridder.masterplate import Masterplate
         wx.PyValidator.__init__(self)
-    
+        self.myplate = Masterplate(2000,int(style))
+
     def Clone(self):
-        return self.__class__()
-    
+        return self.__class__(self)
+
     def Validate(self,win):
         window =wxPyTypeCast(self.GetWindow(), "wxTextCtrl")
         text = window.GetValue()
@@ -56,7 +57,7 @@ class Validate_Plate_Coordinate(wx.PyValidator):
         else:
             textctrl.Refresh()
             return True
-    
+
     def TransferToWindow(self):
         return True
     def TransferFromWindow(self):
@@ -71,17 +72,23 @@ class Validate_Plate_Coordinate(wx.PyValidator):
 class PlatePanel(wx.ScrolledWindow):
     num_subplates = 1
     ID_DELETE_PLATE = 111
-    plate_customizer_dict = {1:("A1","H12"),2:("A1","D12","E1","H12"),3:("A1","","","","","H12"),4:("A1","D6","A7","D12","E1","H6","E7","H12")}
+    plate_customizer_dict = {96:{1:("A1","H12"),2:("A1","D12","E1","H12"),3:("A1","","","","","H12"),4:("A1","D6","A7","D12","E1","H6","E7","H12")},24:{1:("A1","D6"),2:("A1","B6","C1","D6")},384:{1:("A1","P24"),2:("A1","H24","I1","P24"),4:("A1","H12","A13","H24","I1","P12","I13","P24")}}
     change_logger = []
+    style = 96
+
     def __init__(self,*args,**kwds):
         kwds["size"] = MYFRAMESIZE
         wx.ScrolledWindow.__init__(self,*args,**kwds)
 ##        self.SetBackgroundColour(wx.Colour(0,153,77)) # GREEN
 #        self.SetBackgroundColour(wx.Colour(204,255,255)) # BABY BLUE
-        self.SetBackgroundColour(wx.Colour(194,194,194))
+        self.styles = ["24","96","384"]
+        self.platestyle = wx.RadioBox(self,-1,choices=self.styles,style=wx.NO_BORDER|wx.RA_HORIZONTAL)
+        self.platestyle.SetSelection(1)
+        self.platestyle.Bind(wx.EVT_RADIOBOX,self.on_style_change)
         self.plate_add_button = wx.Button(self,label="Add Plate")
         self.plate_display_button = wx.Button(self,label="Configure Done")
         self.refresh_button = wx.Button(self,label="Refresh")
+        self.SetBackgroundColour(wx.Colour(194,194,194))
         self.SetScrollRate(3, 3)
         self.do_connections()
         self.do_layout()
@@ -89,15 +96,26 @@ class PlatePanel(wx.ScrolledWindow):
     
     def do_layout(self):
         self.master_sizer = wx.FlexGridSizer(rows=-1, cols=3, hgap=10, vgap=5)
+        self.master_sizer.Add(self.platestyle)
+        for i in range(2):
+            dummypanel = wx.Panel(self,-1,(1,1))
+            dummypanel.SetBackgroundColour(wx.Colour(194,194,194))
+            self.master_sizer.Add(dummypanel)
         self.master_sizer.Add(self.refresh_button)
         self.master_sizer.Add(self.plate_add_button)
         self.master_sizer.Add(self.plate_display_button,wx.ALIGN_RIGHT)
         self.SetSizer(self.master_sizer)
         self.master_sizer.Layout()
         self.master_sizer.FitInside(self)
-    
+
+    def on_style_change(self,event):
+        self.style = int(self.styles[self.platestyle.GetSelection()])
+        print "style changed to %s" % self.style
+        
     def do_new_layout(self):
+        self.platestyle = wx.RadioBox(self,-1,choices=self.styles,style=wx.NO_BORDER|wx.RA_HORIZONTAL)
         self.plate_add_button = wx.Button(self,label="Add Plate")
+        self.platestyle.SetSelection(self.styles.index(str(self.style)))
         self.plate_display_button = wx.Button(self,label="Plate Configure Done")
         self.refresh_button = wx.Button(self,label="Refresh")
         self.do_connections()
@@ -112,6 +130,7 @@ class PlatePanel(wx.ScrolledWindow):
         self.do_new_layout()
 
     def do_connections(self):
+        self.platestyle.Bind(wx.EVT_RADIOBOX,self.on_style_change)
         self.Bind(wx.EVT_BUTTON,self.add_plate_def,self.plate_add_button)
         self.Bind(wx.EVT_BUTTON,self.set_plate_config,self.plate_display_button)
 	self.Bind(wx.EVT_BUTTON,self.delete_all_plates,self.refresh_button)
@@ -126,8 +145,8 @@ class PlatePanel(wx.ScrolledWindow):
     def add_plate_def(self,event):
         self.GetParent().GetStatusBar().SetStatusText("Adding Plate %s" % self.num_subplates)
         platelabel = wx.StaticText(parent=self,id=-1,label="Plate %s" % self.num_subplates , size=(-1,-1),style=wx.ALIGN_CENTER )
-        text_ctrl_1 = wx.TextCtrl(self, -1, "",(50,-1),validator=Validate_Plate_Coordinate())
-        text_ctrl_2 = wx.TextCtrl(self,-1,"",(50,-1),validator=Validate_Plate_Coordinate())
+        text_ctrl_1 = wx.TextCtrl(self, -1, "",(50,-1))
+        text_ctrl_2 = wx.TextCtrl(self,-1,"",(50,-1))
         self.master_sizer.Add(platelabel,1,wx.ALIGN_CENTER)
         self.master_sizer.Add(text_ctrl_1,1,wx.ALIGN_CENTER)
         self.master_sizer.Add(text_ctrl_2,1,wx.ALIGN_CENTER)
@@ -160,7 +179,7 @@ class PlatePanel(wx.ScrolledWindow):
             if isinstance(child, wx.TextCtrl):
                 self.GetParent().GetStatusBar().SetStatusText("settingplate boundaries automatic done")
                 try:
-                    child.SetValue(self.plate_customizer_dict[self.num_subplates][scanner])
+                    child.SetValue(self.plate_customizer_dict[self.style][self.num_subplates][scanner])
                 except KeyError , e:
                     pass
                 scanner = scanner + 1
@@ -207,7 +226,7 @@ class PlatePanel(wx.ScrolledWindow):
     def set_plate_config(self,event):
         from gridder.masterplate import Masterplate
         # Servant plate object to check user input
-        myplate = Masterplate(2000)
+        myplate = Masterplate(2000,self.style)
         scanned_plate_def = None
         # Local variable to identify plate corner
         count = 0
@@ -223,11 +242,11 @@ class PlatePanel(wx.ScrolledWindow):
                 # flag to determine if corner is left or right depending on platecorner = {1:"left corner",0:"right corner"}
                 flag = count % 2
                 if len(text) == 0 or text=="":
-                    wx.MessageBox("Please enter a plate coordinate between A1 and H12 for %s,%s" % (platecorner[flag],scanned_plate_def))
+                    wx.MessageBox("Please enter a plate coordinate between %s%s and %s%s for %s,%s" % (myplate.alphas[0],myplate.nums[0],myplate.alphas[-1],myplate.nums[-1],platecorner[flag],scanned_plate_def))
                     self.GetParent().PLATE_CONFIGURED = False
                     break
                 elif text not in myplate.ordered_keys:
-                    wx.MessageBox("Please enter a plate coordinate between A1 and H12 for %s,%s" % (platecorner[flag],scanned_plate_def))
+                    wx.MessageBox("Please enter a plate coordinate between %s%s and %s%s for %s,%s" % (myplate.alphas[0],myplate.nums[0],myplate.alphas[-1],myplate.nums[-1],platecorner[flag],scanned_plate_def))
                     self.GetParent().PLATE_CONFIGURED = False
                     break
                 else:
@@ -242,11 +261,11 @@ class PlatePanel(wx.ScrolledWindow):
                 self.GetParent().FindWindowByName("plateop").refresh_plate_choice_comboboxes()
         self.plate_setup_dict = {}
         rows,cols = self.master_sizer.CalcRowsCols()
-        for row in range(1,rows,1):
+        for row in range(2,rows,1):
 #                print "p%s = plate.Plate(\"%s\",\"%s\")" % ( row,self.master_sizer.GetItem(cols*row + 1).GetWindow().GetValue() , self.master_sizer.GetItem(cols*row + 2).GetWindow().GetValue())
             win1 = self.master_sizer.GetItem(cols*row + 1).GetWindow()
             win2 = self.master_sizer.GetItem(cols*row + 2).GetWindow()
-            self.plate_setup_dict[row] = [win1.GetValue(),win2.GetValue()]
+            self.plate_setup_dict[row-1] = [win1.GetValue(),win2.GetValue()]
             win1.Bind(wx.EVT_TEXT,self.display_change_warning)
             win2.Bind(wx.EVT_TEXT,self.display_change_warning)
 
@@ -766,7 +785,7 @@ class PlateOperations(wx.ScrolledWindow):
 
         scrfile.write("#!/usr/bin/python\n")
         scrfile.write("from gridder import masterplate,plate,component,buffercomponent\n")
-        scrfile.write("mp = masterplate.Masterplate(%s)\n" % self.GetParent().FindWindowByName("mpanel").volttc.GetValue())
+        scrfile.write("mp = masterplate.Masterplate(%s,%d)\n" % (self.GetParent().FindWindowByName("mpanel").volttc.GetValue(),self.GetParent().FindWindowByName("platesetup").style))
 
         myplate_setup = self.GetParent().FindWindowByName("platesetup").plate_setup_dict
         for key in myplate_setup.keys():
@@ -811,8 +830,7 @@ class PlateOperations(wx.ScrolledWindow):
             cstring = ""
             for sorted_component in component_keys:
                 cstring = cstring +  objdict[myobj.component_dict[sorted_component]] + " "
-            component_args = ",".join(cstring.split())
-            print "$$$$$$$$$$", component_args
+            component_args = ",".join(cstring.split())  
             com = "p%s.%s(%s,%s)\n" % (myobj.plate.split()[1],self.function_dict[myobj.op],component_args,args)
             print com
             scrfile.write(com)
@@ -836,10 +854,10 @@ class PlateOperations(wx.ScrolledWindow):
 #        scrfile.write("pwhole.fill_water(water)\n")
         scrfile.write("mp.printwellinfo()\n")
         scrfile.write("mp.makefileforformulatrix(r\"%s\")\n" % str(os.path.join(self.dirtowriteto,"%s.dl.txt" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
-        scrfile.write("mp.printpdfhuman(r\"%s\")\n" % str(os.path.join(self.dirtowriteto,"%s" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
+        scrfile.write("mp.writepdf(r\"%s\")\n" % str(os.path.join(self.dirtowriteto,"%s" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
 
 
-        scrfile.write("mp.printpdf(r\"%s\")\n" % str((os.path.join(self.dirtowriteto,"%s_volumes" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))))
+#        scrfile.write("mp.printpdf(r\"%s\")\n" % str((os.path.join(self.dirtowriteto,"%s_volumes" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))))
 
         scrfile.close()
         try:
