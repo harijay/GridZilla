@@ -32,7 +32,8 @@ class MaFrame(wx.Frame):
     def do_layout(self):
         self.Layout()
 #        self.Fit()
-
+    def save_session(self):
+        pass
 class Validate_Plate_Coordinate(wx.PyValidator):
 
 
@@ -187,25 +188,36 @@ class PlatePanel(wx.ScrolledWindow):
 #    def on_right_click(self,event):
 #        self.PopupMenu(self.menu)
 
-    
+    def get_index(self,pos):
+        count = 0
+        for i in self.master_sizer.GetChildren():
+            ipos = i.GetPosition()
+            if ipos == pos:
+                return count
+            count = count + 1
+
     def show_plate_delete_choice(self,event,caller):
-        def delete_component(mycaller):
-            print "Deleting plate %s NOT YET IMPLEMENTED " % mycaller.GetLabel()
-            wx.MessageBox("Deleting plate %s NOT YET IMPLEMENTED " % mycaller.GetLabel())
-            # first find the element:
-#            all_children = self.master_sizer.GetChildren()
-#            print all_children
-#            i = 1
-#            for child in all_children:
-#                if isinstance(child.GetWindow(),wx.StaticText):
-#                    i = i + 3
-#                    if child.GetWindow().GetLabel() == mycaller.GetLabel():
-#                        print "removing three" , i , i + 1 , i + 2
-#                        self.master_sizer.Remove(all_children[i].GetWindow())
-#                        self.master_sizer.Remove(all_children[i + 1].GetWindow())
-#                        self.master_sizer.Remove(all_children[i + 2].GetWindow())
-#                        self.num_subplates = self.num_subplates - 1
-        
+        def delete_component(caller):
+            # Get row number of firing event
+            delpos = self.master_sizer.GetItem(caller).GetPosition()
+            index = self.get_index(delpos)
+            print "Delete called " , index
+            w1 = self.master_sizer.GetItem(index).GetWindow()
+            w2 = self.master_sizer.GetItem(index + 1 ).GetWindow()
+            w3 = self.master_sizer.GetItem(index + 2).GetWindow()
+
+            w1.Destroy()
+            w2.Destroy()
+            w3.Destroy()
+            row,col = self.master_sizer.CalcRowsCols()
+            for elem in range(index,row*col,1):
+                w = self.master_sizer.GetItem(elem).GetWindow()
+                if isinstance(w,wx.StaticText):
+                    pval = w.GetLabel().split()
+                    w.SetLabel(" ".join([pval[0] , "%s" % (int(pval[1])- 1)]))
+      
+            self.master_sizer.Layout()
+            
         menu = wx.Menu()
         menu.Append(-1,"")
         menu.Append(self.ID_DELETE_PLATE,"Delete Plate")
@@ -308,7 +320,7 @@ class  ComponentPanel(wx.ScrolledWindow):
         self.component_volume_label = wx.StaticText(self,-1,"Volume",style=wx.ALIGN_CENTER)
         self.component_ph_label = wx.StaticText(self,-1,"pH",style=wx.ALIGN_CENTER)
         self.component_pka_label = wx.StaticText(self,-1,"pKa",style=wx.ALIGN_CENTER)
-        self.top_grid_sizer.Add(self.component_number_slot,1,wx.ALIGN_CENTER)
+        self.top_grid_sizer.Add(self.component_number_slot,1,wx.EXPAND|wx.ALIGN_CENTER)
         self.top_grid_sizer.Add(self.component_name_label,1,wx.EXPAND|wx.ALIGN_CENTER)
         self.top_grid_sizer.Add(self.component_conc_label,1,wx.EXPAND|wx.ALIGN_CENTER)
         self.top_grid_sizer.Add(self.component_volume_label,wx.EXPAND|wx.ALIGN_CENTER)
