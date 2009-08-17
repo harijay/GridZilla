@@ -10,7 +10,7 @@ import wx
 import wx.lib.scrolledpanel  as myscrolledpanel
 import wx.lib.inspection
 MYFRAMESIZE = (1212,700)
-
+ID_DELETE_PLATE = 111
 import sys
 
 
@@ -72,7 +72,7 @@ class Validate_Plate_Coordinate(wx.PyValidator):
 
 class PlatePanel(wx.ScrolledWindow):
     num_subplates = 1
-    ID_DELETE_PLATE = 111
+    
     plate_customizer_dict = {96:{1:("A1","H12"),2:("A1","D12","E1","H12"),3:("A1","","","","","H12"),4:("A1","D6","A7","D12","E1","H6","E7","H12")},24:{1:("A1","D6"),2:("A1","B6","C1","D6")},384:{1:("A1","P24"),2:("A1","H24","I1","P24"),4:("A1","H12","A13","H24","I1","P12","I13","P24")}}
     change_logger = []
     style = 96
@@ -170,8 +170,7 @@ class PlatePanel(wx.ScrolledWindow):
         for child in self.GetChildren():
             if isinstance(child, wx.StaticText):
                 if plate_pattern.search(child.GetLabel()):
-#                    child.Bind(wx.EVT_RIGHT_DOWN ,lamda event, caller=child :self.delete_platedef(event,caller))
-                    child.Bind(wx.EVT_RIGHT_DOWN,lambda event, caller= child: self.show_plate_delete_choice(event,caller))
+                    child.Bind(wx.EVT_RIGHT_DOWN, self.show_plate_delete_choice)
 
     def has_config(self):
         # Local variable to run along plate config tuple using self.plate_customizer_dict[self.num_subplates][scanner]
@@ -196,34 +195,36 @@ class PlatePanel(wx.ScrolledWindow):
                 return count
             count = count + 1
 
-    def show_plate_delete_choice(self,event,caller):
-        def delete_component(caller):
-            # Get row number of firing event
-            delpos = self.master_sizer.GetItem(caller).GetPosition()
-            index = self.get_index(delpos)
-            print "Delete called " , index
-            w1 = self.master_sizer.GetItem(index).GetWindow()
-            w2 = self.master_sizer.GetItem(index + 1 ).GetWindow()
-            w3 = self.master_sizer.GetItem(index + 2).GetWindow()
-
-            w1.Destroy()
-            w2.Destroy()
-            w3.Destroy()
-            row,col = self.master_sizer.CalcRowsCols()
-            for elem in range(index,row*col,1):
-                w = self.master_sizer.GetItem(elem).GetWindow()
-                if isinstance(w,wx.StaticText):
-                    pval = w.GetLabel().split()
-                    w.SetLabel(" ".join([pval[0] , "%s" % (int(pval[1])- 1)]))
-      
-            self.master_sizer.Layout()
-            
+    def delete_called_plate(self,event,caller):
+        # Get row number of firing event
+        print type(caller)
+        delpos = self.master_sizer.GetItem(caller).GetPosition()
+        index = self.get_index(delpos)
+        print "Delete called " , index
+        w1 = self.master_sizer.GetItem(index).GetWindow()
+        w2 = self.master_sizer.GetItem(index + 1 ).GetWindow()
+        w3 = self.master_sizer.GetItem(index + 2).GetWindow()
+        w1.Destroy()
+        w2.Destroy()
+        w3.Destroy()
+        row,col = self.master_sizer.CalcRowsCols()
+        for elem in range(index,row*col,1):
+            w = self.master_sizer.GetItem(elem).GetWindow()
+            if isinstance(w,wx.StaticText):
+                pval = w.GetLabel().split()
+                w.SetLabel(" ".join([pval[0] , "%s" % (int(pval[1])- 1)]))
+        self.master_sizer.Layout()
+        
+    def show_plate_delete_choice(self,event):
+        mycaller = event.GetEventObject()
         menu = wx.Menu()
         menu.Append(-1,"")
-        menu.Append(self.ID_DELETE_PLATE,"Delete Plate")
+        delete_entry = menu.Append(-1,"&Delete Plate")
         menu.Append(-1,"")
+        self.Bind(wx.EVT_MENU,lambda event,caller=mycaller:self.delete_called_plate(event,caller=mycaller),delete_entry)
         self.PopupMenu(menu)
-        wx.EVT_MENU(self,self.ID_DELETE_PLATE,delete_component(caller))
+        
+
 
         
     def display_change_warning(self,event):
