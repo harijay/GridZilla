@@ -127,9 +127,13 @@ class PlatePanel(wx.ScrolledWindow):
     def delete_all_plates(self,event):
         print "Destroying all children"
         self.DestroyChildren()
-        
+        self.GetParent().plateobjects = []
         self.do_new_layout()
+        if self.GetParent().PLATE_CONFIGURED:
+            self.GetParent().FindWindowByName("plateop").make_plate_choicetxtlist()
+            self.GetParent().FindWindowByName("plateop").refresh_plate_choice_comboboxes()
 
+            
     def do_connections(self):
         self.platestyle.Bind(wx.EVT_RADIOBOX,self.on_style_change)
         self.Bind(wx.EVT_BUTTON,self.add_plate_def,self.plate_add_button)
@@ -200,8 +204,11 @@ class PlatePanel(wx.ScrolledWindow):
         print type(caller)
         delpos = self.master_sizer.GetItem(caller).GetPosition()
         index = self.get_index(delpos)
-        print "Delete called " , index
         w1 = self.master_sizer.GetItem(index).GetWindow()
+
+
+
+
         w2 = self.master_sizer.GetItem(index + 1 ).GetWindow()
         w3 = self.master_sizer.GetItem(index + 2).GetWindow()
         w1.Destroy()
@@ -213,7 +220,15 @@ class PlatePanel(wx.ScrolledWindow):
             if isinstance(w,wx.StaticText):
                 pval = w.GetLabel().split()
                 w.SetLabel(" ".join([pval[0] , "%s" % (int(pval[1])- 1)]))
+        self.num_subplates = self.num_subplates - 1
+        if self.GetParent().PLATE_CONFIGURED:
+            self.change_logger.append(event.GetId())
+            self.set_plate_config(event)
+            self.GetParent().FindWindowByName("plateop").make_plate_choicetxtlist()
+            self.GetParent().FindWindowByName("plateop").refresh_plate_choice_comboboxes()
         self.master_sizer.Layout()
+
+
         
     def show_plate_delete_choice(self,event):
         mycaller = event.GetEventObject()
@@ -237,6 +252,7 @@ class PlatePanel(wx.ScrolledWindow):
         
     
     def set_plate_config(self,event):
+        self.GetParent().plateobjects = []
         from gridder.masterplate import Masterplate
         # Servant plate object to check user input
         myplate = Masterplate(2000,self.style)
@@ -268,8 +284,8 @@ class PlatePanel(wx.ScrolledWindow):
 
             childcount = childcount + 1
             if childcount == max :
+                print """arfQRF'aerf'qer'Fae"RF''"""
                 self.GetParent().PLATE_CONFIGURED = True
-                self.GetParent().PLATE_CONFIGURED
                 self.GetParent().FindWindowByName("plateop").make_plate_choicetxtlist()
                 self.GetParent().FindWindowByName("plateop").refresh_plate_choice_comboboxes()
         self.plate_setup_dict = {}
@@ -585,11 +601,7 @@ class PlateOperations(wx.ScrolledWindow):
         for item in self.plate_combobox_objects:
             # Simply setting the combobox_object.choice to new choices did not do it
             # One has to clear the present plate choices and repopulate the list
-            item.Clear()
-            # Repopulate the combobox object with the new items
-
-            for c in self.platelist:
-                item.Append(c)
+            item.SetItems(self.platelist)
            
 
     def on_plate_combobox_select(self,event,platecallercombobox):
