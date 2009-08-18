@@ -179,14 +179,20 @@ class PlatePanel(wx.ScrolledWindow):
     def has_config(self):
         # Local variable to run along plate config tuple using self.plate_customizer_dict[self.num_subplates][scanner]
         scanner = 0
-        for child in self.GetChildren():
-            if isinstance(child, wx.TextCtrl):
-                self.GetParent().GetStatusBar().SetStatusText("settingplate boundaries automatic done")
-                try:
-                    child.SetValue(self.plate_customizer_dict[self.style][self.num_subplates][scanner])
-                except KeyError , e:
-                    pass
-                scanner = scanner + 1
+        # We  dont want to auto_fill if some configuration has already been established
+        if not self.GetParent().PLATE_CONFIGURED:
+            for child in self.GetChildren():
+                if isinstance(child, wx.TextCtrl):
+                    try:
+                        child.SetValue(self.plate_customizer_dict[self.style][self.num_subplates][scanner])
+                        self.GetParent().GetStatusBar().SetStatusText("settingplate boundaries automatic done")
+                    except KeyError , e:
+                        pass
+                    scanner = scanner + 1
+        else:
+            # We  dont want to auto_fill if some configuration has already been established
+            pass
+
 #
 #    def on_right_click(self,event):
 #        self.PopupMenu(self.menu)
@@ -284,7 +290,6 @@ class PlatePanel(wx.ScrolledWindow):
 
             childcount = childcount + 1
             if childcount == max :
-                print """arfQRF'aerf'qer'Fae"RF''"""
                 self.GetParent().PLATE_CONFIGURED = True
                 self.GetParent().FindWindowByName("plateop").make_plate_choicetxtlist()
                 self.GetParent().FindWindowByName("plateop").refresh_plate_choice_comboboxes()
