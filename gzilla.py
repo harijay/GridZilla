@@ -207,7 +207,6 @@ class PlatePanel(wx.ScrolledWindow):
 
     def delete_called_plate(self,event,caller):
         # Get row number of firing event
-        print type(caller)
         delpos = self.master_sizer.GetItem(caller).GetPosition()
         index = self.get_index(delpos)
         w1 = self.master_sizer.GetItem(index).GetWindow()
@@ -348,9 +347,6 @@ class  ComponentPanel(wx.ScrolledWindow):
         self.top_grid_sizer.Add(self.component_volume_label,wx.EXPAND|wx.ALIGN_CENTER)
         self.top_grid_sizer.Add(self.component_ph_label,1,wx.EXPAND|wx.ALIGN_CENTER)
         self.top_grid_sizer.Add(self.component_pka_label,1,wx.EXPAND|wx.ALIGN_CENTER)
-        self.menu = wx.Menu()
-        self.menu.Append(-1,"Delete Component")
-        wx.EVT_MENU( self.menu, -1, self.delete_component )
         self.do_connections()
         self.bind_delete_events()
         self.SetScrollRate(3, 3)
@@ -376,11 +372,51 @@ class  ComponentPanel(wx.ScrolledWindow):
 
     
     def on_right_click(self,event):
-        self.PopupMenu(self.menu)
+        mycaller = event.GetEventObject()
+        menu = wx.Menu()
+        delete_menu_item=menu.Append(-1,"Delete Component")
+        self.Bind(wx.EVT_MENU,lambda caller: self.delete_component(event,caller=mycaller) )
+        self.PopupMenu(menu)
     
-    def delete_component(self,event):
+    def get_index(self,pos):
+        count = 0
+        for i in self.top_grid_sizer.GetChildren():
+            ipos = i.GetPosition()
+            if ipos == pos:
+                return count
+            count = count + 1
+
+    def delete_component(self,event,caller):
         # Implement Component Deletion"
-        print "Delete component called"
+                # Get row number of firing event
+        delpos = self.top_grid_sizer.GetItem(caller).GetPosition()
+        index = self.get_index(delpos)
+        print index
+        widget_bin = []
+        rows,cols = self.top_grid_sizer.CalcRowsCols()
+
+        for i in range(index,index+cols,1):
+            w = self.top_grid_sizer.GetItem(i).GetWindow()
+            widget_bin.append(w)
+        
+        print len(widget_bin)
+        for item in widget_bin:
+            item.Destroy()
+
+        newrows,newcols = self.top_grid_sizer.CalcRowsCols()
+        for elem in range(index,newrows*newcols,1):
+            w = self.top_grid_sizer.GetItem(elem).GetWindow()
+            if isinstance(w,wx.StaticText):
+                pval = w.GetLabel().split()
+                w.SetLabel(" ".join([pval[0] , "%s" % (int(pval[1])- 1)]))
+        self.num_components = self.num_components - 1
+        self.top_grid_sizer.Layout()
+        self.GetParent().Layout()
+        if self.IS_CONFIGURED:
+            print self.all_solutionsdict.pop(index/6)
+            if self.buffer_namedict.has_key(index/6):
+                self.buffer_namedict.pop(index/6)
+            self.set_components(event)
     
     def do_layout(self):
 #        self.sizer_top = wx.BoxSizer(wx.VERTICAL)
@@ -408,8 +444,12 @@ class  ComponentPanel(wx.ScrolledWindow):
             self.top_grid_sizer.Add(text_ctrl_1,1,wx.ALIGN_CENTER)
             self.top_grid_sizer.Add(text_ctrl_2,1,wx.ALIGN_CENTER)
             self.top_grid_sizer.Add(text_ctrl_3,1,wx.ALIGN_CENTER)
-            self.top_grid_sizer.Add((1,1),1)
-            self.top_grid_sizer.Add((1,1),1)
+            dummypanel1 = wx.Panel(self,-1,(1,1))
+            dummypanel1.SetBackgroundColour(wx.Colour(133,133,133))
+            dummypanel2 = wx.Panel(self,-1,(1,1))
+            dummypanel2.SetBackgroundColour(wx.Colour(133,133,133))
+            self.top_grid_sizer.Add(dummypanel1)
+            self.top_grid_sizer.Add(dummypanel2)
 
 
         
@@ -461,6 +501,9 @@ class  ComponentPanel(wx.ScrolledWindow):
         import re
         spaces = re.compile("\s+")
         rows,cols = self.top_grid_sizer.CalcRowsCols()
+        self.all_solutionsdict.clear()
+        self.component_namedict.clear()
+        self.buffer_namedict.clear()
         for rownum in range(2,rows,1):
             if "Component" in self.top_grid_sizer.GetItem(rownum*cols + 0 ).GetWindow().GetLabel():
                 if (self.top_grid_sizer.GetItem(rownum*cols + 1 ).GetWindow().GetValue() or \
