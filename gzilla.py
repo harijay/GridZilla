@@ -1,3 +1,4 @@
+
 import os.path
 #!/usr/bin/python
 # To change this template, choose Tools | Templates
@@ -5,7 +6,6 @@ import os.path
 
 
 
-from wx._core import FindWindowByName
 import wx
 import wx.lib.scrolledpanel  as myscrolledpanel
 import wx.lib.inspection
@@ -112,6 +112,8 @@ class PlatePanel(wx.ScrolledWindow):
     def on_style_change(self,event):
         self.style = int(self.styles[self.platestyle.GetSelection()])
         print "style changed to %s" % self.style
+        if self.GetParent().PLATE_CONFIGURED:
+            self.GetParent().PLATE_CONFIGURED = False
         
     def do_new_layout(self):
         self.platestyle = wx.RadioBox(self,-1,choices=self.styles,style=wx.NO_BORDER|wx.RA_HORIZONTAL)
@@ -132,6 +134,7 @@ class PlatePanel(wx.ScrolledWindow):
         if self.GetParent().PLATE_CONFIGURED:
             self.GetParent().FindWindowByName("plateop").make_plate_choicetxtlist()
             self.GetParent().FindWindowByName("plateop").refresh_plate_choice_comboboxes()
+            self.GetParent().PLATE_CONFIGURED = False
 
             
     def do_connections(self):
@@ -238,9 +241,7 @@ class PlatePanel(wx.ScrolledWindow):
     def show_plate_delete_choice(self,event):
         mycaller = event.GetEventObject()
         menu = wx.Menu()
-        menu.Append(-1,"")
         delete_entry = menu.Append(-1,"&Delete Plate")
-        menu.Append(-1,"")
         self.Bind(wx.EVT_MENU,lambda event,caller=mycaller:self.delete_called_plate(event,caller=mycaller),delete_entry)
         self.PopupMenu(menu)
         
@@ -672,8 +673,12 @@ class PlateOperations(wx.ScrolledWindow):
             self.make_component_choice_list()
 
 #        print "selected Operation combobox event %s %s from rid row %d " % (event.GetString(),event.GetId(),operationcombobox.rowposition)
-        for delcounter in range(2,10,1):
-            oldwindow = self.po_sizer.GetItem(int(operationcombobox.rowposition)*int(10) + delcounter).GetWindow()
+        rows,cols = self.po_sizer.CalcRowsCols()
+        print "#######################"
+        for i in range(rows*cols):
+            print self.po_sizer.GetItem(i).GetWindow()
+        for counter in range(operationcombobox.rowposition*cols + 2,operationcombobox.rowposition*cols + cols,1):
+            oldwindow = self.po_sizer.GetItem(counter).GetWindow()
             dummypanel = wx.Panel(self,-1,size=(140,-1))
             self.po_sizer.Replace(oldwindow ,dummypanel )
             oldwindow.Destroy()
@@ -752,6 +757,7 @@ class PlateOperations(wx.ScrolledWindow):
                 new_platechoice_combobox = PromptingComboBox(self,"",choices=mynewchoice, style=wx.CB_SORT,rowposition=currentrowpos)
                 # Need to lambda the combobox so we can know which row the event came from
                 new_platechoice_combobox.Bind(wx.EVT_COMBOBOX,lambda event,platecallercombobox=new_platechoice_combobox : self.on_plate_combobox_select(event,platecallercombobox))
+                new_platechoice_combobox.Bind(wx.EVT_RIGHT_DOWN,lambda event,platecallercombobox=new_platechoice_combobox : self.delete_operation(event,platecallercombobox))
                 new_dispense_combobox = PromptingComboBox(self,"", choices=self.choices, style=wx.CB_SORT,size=(280,-1),rowposition=currentrowpos)
                 new_dispense_combobox.Bind(wx.EVT_COMBOBOX,lambda event,operationcombobox=new_dispense_combobox : self.on_operation_combobox_select(event,operationcombobox))
                 self.plate_combobox_objects.append(new_platechoice_combobox)
@@ -771,9 +777,31 @@ class PlateOperations(wx.ScrolledWindow):
         else:
             wx.MessageBox("No Plates: Please Set Plate COnfig and then try")
 
-    def delete_operation(self,event):
-        wx.MessageBox("Delete operation not implemented")
-        event.Skip()
+    def delete_operation(self,event,platecallercombobox):
+        wx.MessageBox("Delete operation not implemented for %s " % platecallercombobox.rowposition )
+        rows,cols = self.po_sizer.CalcRowsCols()
+        dustbin = []
+        for i in range(platecallercombobox.rowposition*cols,platecallercombobox.rowposition*cols + cols,1):
+            widget = self.po_sizer.GetItem(i).GetWindow()
+            dustbin.append(widget)
+            print self.plate_id_mapper_dict
+            print self.plate_operations
+            if self.plate_operations.has_key(platecallercombobox.rowposition):
+                self.plate_operations.pop(platecallercombobox.rowposition)
+            if widget in self.plate_combobox_objects:
+                self.plate_combobox_objects.remove(widget)
+                self.plate_id_mapper_dict.pop(widget.GetId())
+            if widget in self.dispense_choice_boxlist:
+                self.dispense_choice_boxlist.remove(widget)
+        print dustbin,len(dustbin)
+        for w in dustbin:
+            dummypanel = wx.Panel(self,-1,(1,1))
+            self.po_sizer.Replace(w , dummypanel)
+            self.po_sizer.Detach(w)
+            w.Destroy()
+        print self.po_sizer.CalcRowsCols()
+        self.po_sizer.Layout()
+#        event.Skip()
     
     def make_plate_choicetxtlist(self):
         # Called by Other Class to create list used to setup comboboxes here
