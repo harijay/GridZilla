@@ -10,7 +10,6 @@ import wx
 import wx.lib.scrolledpanel  as myscrolledpanel
 import wx.lib.inspection
 MYFRAMESIZE = (1212,700)
-ID_DELETE_PLATE = 111
 import sys
 
 
@@ -74,7 +73,7 @@ class PlatePanel(wx.ScrolledWindow):
     num_subplates = 1
     
     plate_customizer_dict = {96:{1:("A1","H12"),2:("A1","D12","E1","H12"),3:("A1","","","","","H12"),4:("A1","D6","A7","D12","E1","H6","E7","H12")},24:{1:("A1","D6"),2:("A1","B6","C1","D6")},384:{1:("A1","P24"),2:("A1","H24","I1","P24"),4:("A1","H12","A13","H24","I1","P12","I13","P24")}}
-    change_logger = []
+#    change_logger = []
     style = 96
 
     def __init__(self,*args,**kwds):
@@ -124,13 +123,16 @@ class PlatePanel(wx.ScrolledWindow):
         self.do_connections()
         self.do_layout()
         self.bind_delete_events()
-        self.num_subplates = 1
+        
     
     def delete_all_plates(self,event):
         print "Destroying all children"
         self.DestroyChildren()
         self.GetParent().plateobjects = []
         self.do_new_layout()
+        self.num_subplates = 1
+#        self.set_plateconfig_status_false(event)
+        event.Skip()
         if self.GetParent().PLATE_CONFIGURED:
             self.GetParent().FindWindowByName("plateop").make_plate_choicetxtlist()
             self.GetParent().FindWindowByName("plateop").refresh_plate_choice_comboboxes()
@@ -149,7 +151,7 @@ class PlatePanel(wx.ScrolledWindow):
         self.SetFocusIgnoringChildren()
         print "refreshed"
         event.Skip()
-    
+
     def add_plate_def(self,event):
         self.GetParent().GetStatusBar().SetStatusText("Adding Plate %s" % self.num_subplates)
         platelabel = wx.StaticText(parent=self,id=-1,label="Plate %s" % self.num_subplates , size=(-1,-1),style=wx.ALIGN_CENTER )
@@ -158,6 +160,7 @@ class PlatePanel(wx.ScrolledWindow):
         self.master_sizer.Add(platelabel,1,wx.ALIGN_CENTER)
         self.master_sizer.Add(text_ctrl_1,1,wx.ALIGN_CENTER)
         self.master_sizer.Add(text_ctrl_2,1,wx.ALIGN_CENTER)
+        self.master_sizer.Layout()
         #self.sizer_top.Add(self.plate_add_button,1,wx.RIGHT|wx.ALIGN_BOTTOM,10)
         
         self.has_config()
@@ -169,7 +172,8 @@ class PlatePanel(wx.ScrolledWindow):
         self.num_subplates = self.num_subplates + 1
         self.GetParent().do_layout()
         #self.GetParent().Fit()
-
+        self.set_plateconfig_status_false(event)
+        event.Skip()
     
     def bind_delete_events(self):
         import re
@@ -213,28 +217,26 @@ class PlatePanel(wx.ScrolledWindow):
         delpos = self.master_sizer.GetItem(caller).GetPosition()
         index = self.get_index(delpos)
         w1 = self.master_sizer.GetItem(index).GetWindow()
-
-
-
-
         w2 = self.master_sizer.GetItem(index + 1 ).GetWindow()
         w3 = self.master_sizer.GetItem(index + 2).GetWindow()
         w1.Destroy()
         w2.Destroy()
         w3.Destroy()
-        row,col = self.master_sizer.CalcRowsCols()
-        for elem in range(index,row*col,1):
-            w = self.master_sizer.GetItem(elem).GetWindow()
-            if isinstance(w,wx.StaticText):
-                pval = w.GetLabel().split()
-                w.SetLabel(" ".join([pval[0] , "%s" % (int(pval[1])- 1)]))
-        self.num_subplates = self.num_subplates - 1
+        self.master_sizer.Layout()
+#        row,col = self.master_sizer.CalcRowsCols()
+#        for elem in range(index,row*col,1):
+#            w = self.master_sizer.GetItem(elem).GetWindow()
+#            if isinstance(w,wx.StaticText):
+#                pval = w.GetLabel().split()
+#                w.SetLabel(" ".join([pval[0] , "%s" % (int(pval[1])- 1)]))
+#        self.num_subplates = self.num_subplates - 1
+#        self.set_plateconfig_status_false(event)
         if self.GetParent().PLATE_CONFIGURED:
-            self.change_logger.append(event.GetId())
+#            self.change_logger.append(event.GetId())
             self.set_plate_config(event)
             self.GetParent().FindWindowByName("plateop").make_plate_choicetxtlist()
             self.GetParent().FindWindowByName("plateop").refresh_plate_choice_comboboxes()
-        self.master_sizer.Layout()
+        
 
 
         
@@ -248,22 +250,26 @@ class PlatePanel(wx.ScrolledWindow):
 
 
         
-    def display_change_warning(self,event):
-        if event.GetId() not in self.change_logger:
-            msg = wx.MessageBox("Please Configure Plates and then check configure to propagate changes")
-            self.change_logger.append(event.GetId())
+#    def display_change_warning(self,event):
+#        if event.GetId() not in self.change_logger:
+#            msg = wx.MessageBox("Please Configure Plates and then check configure to propagate changes")
+#            self.change_logger.append(event.GetId())
+#            event.Skip()
+#        else:
+#            event.Skip()
+
+    def set_plateconfig_status_false(self,event):
+        if self.GetParent().PLATE_CONFIGURED:
+            self.GetParent().PLATE_CONFIGURED = False
             event.Skip()
-        else:
-            event.Skip()
-        
     
     def set_plate_config(self,event):
         self.GetParent().plateobjects = []
         from gridder.masterplate import Masterplate
         # Servant plate object to check user input
         myplate = Masterplate(2000,self.style)
-        scanned_plate_def = None
         # Local variable to identify plate corner
+        scanned_plate_def = None
         count = 0
         childcount = 0
         platecorner = {1:"left corner",0:"right corner"}
@@ -289,6 +295,7 @@ class PlatePanel(wx.ScrolledWindow):
                         self.GetParent().plateobjects.append(scanned_plate_def)
 
             childcount = childcount + 1
+            # If it has scanned through all the children in plateop panel without breaking out of this set_plate_config
             if childcount == max :
                 self.GetParent().PLATE_CONFIGURED = True
                 self.GetParent().FindWindowByName("plateop").make_plate_choicetxtlist()
@@ -300,9 +307,9 @@ class PlatePanel(wx.ScrolledWindow):
             win1 = self.master_sizer.GetItem(cols*row + 1).GetWindow()
             win2 = self.master_sizer.GetItem(cols*row + 2).GetWindow()
             self.plate_setup_dict[row-1] = [win1.GetValue(),win2.GetValue()]
-            win1.Bind(wx.EVT_TEXT,self.display_change_warning)
-            win2.Bind(wx.EVT_TEXT,self.display_change_warning)
-
+            # If user changes anything from now on this invalidates plate_config status
+            win1.Bind(wx.EVT_TEXT,self.set_plateconfig_status_false)
+            win2.Bind(wx.EVT_TEXT,self.set_plateconfig_status_false)
         event.Skip()
 
 
@@ -646,11 +653,33 @@ class PlateOperations(wx.ScrolledWindow):
         self.po_sizer.FitInside(self)
     
     def refresh_plate_choice_comboboxes(self):
-        i = 0
-        for item in self.plate_combobox_objects:
-            # Simply setting the combobox_object.choice to new choices did not do it
-            # One has to clear the present plate choices and repopulate the list
-            item.SetItems(self.platelist)
+#        i = 0
+#        for item in self.plate_combobox_objects:
+#            # Simply setting the combobox_object.choice to new choices did not do it
+#            # One has to clear the present plate choices and repopulate the list
+#            item.SetItems(self.platelist)
+#
+        rows,cols = self.po_sizer.CalcRowsCols()
+
+        for row in range(1,rows,1):
+            for col in range(0,cols,1):
+                try:
+                    w = self.po_sizer.GetItem(row*cols + col).GetWindow()
+                    if w in self.plate_combobox_objects:
+                        selected = None
+                        try :
+                            selected = w.GetValue()
+                        except :
+                            selected = ""
+                            pass
+                        w.Clear()
+                        w.SetItems(self.platelist)
+                        if selected in self.platelist:
+                            w.SetValue(selected)
+                        else:
+                            w.SetValue("")
+                except Exception , e:
+                    print "Nothing to Refresh"
            
 
     def on_plate_combobox_select(self,event,platecallercombobox):
@@ -775,10 +804,9 @@ class PlateOperations(wx.ScrolledWindow):
             else:
                 wx.MessageBox("No Components: Please Configure components and then add operations")
         else:
-            wx.MessageBox("No Plates: Please Set Plate COnfig and then try")
-
-    def delete_operation(self,event,platecallercombobox):
-        wx.MessageBox("Delete operation not implemented for %s " % platecallercombobox.rowposition )
+            wx.MessageBox("No Plates: Please Set Plate COnfig and then Add operation")
+    
+    def  perform_delete(self,event,platecallercombobox):
         rows,cols = self.po_sizer.CalcRowsCols()
         dustbin = []
         for i in range(platecallercombobox.rowposition*cols,platecallercombobox.rowposition*cols + cols,1):
@@ -801,6 +829,14 @@ class PlateOperations(wx.ScrolledWindow):
             w.Destroy()
         print self.po_sizer.CalcRowsCols()
         self.po_sizer.Layout()
+
+    def delete_operation(self,event,platecallercombobox):
+        menu = wx.Menu()
+        delete_item = menu.Append(-1,"Delete Operation")
+        self.Bind(wx.EVT_MENU,lambda event,caller=platecallercombobox:self.perform_delete(event,platecallercombobox),delete_item)
+        self.PopupMenu(menu)
+        
+        
 #        event.Skip()
     
     def make_plate_choicetxtlist(self):
@@ -861,6 +897,9 @@ class PlateOperations(wx.ScrolledWindow):
         import os
         from gridder import plateliberror
         scrfile = None
+        if not self.GetParent().PLATE_CONFIGURED:
+            wx.MessageBox("Plate configuration changed: Continuing regardless : Please check Dispense data")
+        
         try :
             if self.dirtowriteto == None :
                 if os.environ.has_key("HOME"):
@@ -966,12 +1005,14 @@ class PlateOperations(wx.ScrolledWindow):
             self.GetParent().GetStatusBar().SetStatusText("DISPENSE LIST %s OUTPUT  " % str(os.path.join(self.dirtowriteto,"%s.dl.txt" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
             self.GetParent().GetStatusBar().SetStatusText("FILES OUTPUT with prefix %s" % str(os.path.join(self.dirtowriteto,"%s" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
             self.GetParent().GetStatusBar().SetBackgroundColour(wx.Colour(204,255,204))
-        except plateliberror.PlatelibException , p :
+        
+#        except plateliberror.PlatelibException , p :
+#            self.GetParent().GetStatusBar().SetBackgroundColour(wx.Colour(255,204,153))
+#            self.GetParent().GetStatusBar().SetStatusText(p.message)
+
+        except Exception , e:
             self.GetParent().GetStatusBar().SetBackgroundColour(wx.Colour(255,204,153))
-            self.GetParent().GetStatusBar().SetStatusText(p.message)
-
-
-    
+            self.GetParent().GetStatusBar().SetStatusText(e.message)
 
 
         
