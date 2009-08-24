@@ -11,6 +11,7 @@ import wx.lib.scrolledpanel  as myscrolledpanel
 import wx.lib.inspection
 MYFRAMESIZE = (1212,700)
 import sys
+import yaml
 
 
 class MaFrame(wx.Frame):
@@ -33,6 +34,7 @@ class MaFrame(wx.Frame):
 #        self.Fit()
     def save_session(self):
         pass
+        
 class Validate_Plate_Coordinate(wx.PyValidator):
 
 
@@ -214,7 +216,8 @@ class PlatePanel(wx.ScrolledWindow):
 
     def delete_called_plate(self,event,caller):
         # Get row number of firing event
-        delpos = self.master_sizer.GetItem(caller).GetPosition()
+#        delpos = self.master_sizer.GetItem(caller).GetPosition()
+        delpos = caller.GetPosition()
         index = self.get_index(delpos)
         w1 = self.master_sizer.GetItem(index).GetWindow()
         w2 = self.master_sizer.GetItem(index + 1 ).GetWindow()
@@ -304,16 +307,29 @@ class PlatePanel(wx.ScrolledWindow):
         rows,cols = self.master_sizer.CalcRowsCols()
         for row in range(2,rows,1):
 #                print "p%s = plate.Plate(\"%s\",\"%s\")" % ( row,self.master_sizer.GetItem(cols*row + 1).GetWindow().GetValue() , self.master_sizer.GetItem(cols*row + 2).GetWindow().GetValue())
+            win0 = self.master_sizer.GetItem(cols*row).GetWindow()
             win1 = self.master_sizer.GetItem(cols*row + 1).GetWindow()
             win2 = self.master_sizer.GetItem(cols*row + 2).GetWindow()
-            self.plate_setup_dict[row-1] = [win1.GetValue(),win2.GetValue()]
+            self.plate_setup_dict[win0.GetLabel().split()[1]] = [win1.GetValue(),win2.GetValue()]
             # If user changes anything from now on this invalidates plate_config status
             win1.Bind(wx.EVT_TEXT,self.set_plateconfig_status_false)
             win2.Bind(wx.EVT_TEXT,self.set_plateconfig_status_false)
         event.Skip()
-
-
-
+    
+    def save_session(self,event):
+        print yaml.dump(self.plate_setup_dict)
+        print self.plate_setup_dict
+    
+#
+#            platelabel = wx.StaticText(parent=self,id=-1,label="Plate %s" % self.num_subplates , size=(-1,-1),style=wx.ALIGN_CENTER )
+#
+#            text_ctrl_1 = wx.TextCtrl(self, -1, "A1",(50,-1))
+#            text_ctrl_2 = wx.TextCtrl(self,-1,"B5",(50,-1))
+#            self.master_sizer.Add(platelabel,1,wx.ALIGN_CENTER)
+#            self.master_sizer.Add(text_ctrl_1,1,wx.ALIGN_CENTER)
+#            self.master_sizer.Add(text_ctrl_2,1,wx.ALIGN_CENTER)
+#            self.master_sizer.Layout()
+#        self.bind_delete_events()
 
 
 class  ComponentPanel(wx.ScrolledWindow):
@@ -550,8 +566,11 @@ class  ComponentPanel(wx.ScrolledWindow):
 #                        print "Added buffer component num :  %d , Name : %s , Concentration : %s Volume : %s pH: %s  pKa : %s" % tuple([rownum] + itemvals)
         self.GetParent().FindWindowByName("plateop").make_component_choice_list()
         self.IS_CONFIGURED = True
-
-
+        
+    def save_session(self,event):
+        print yaml.dump(self.component_namedict)
+        print yaml.dump(self.buffer_namedict)
+        event.Skip()
 
 
 class PromptingComboBox(wx.ComboBox) :
@@ -691,10 +710,6 @@ class PlateOperations(wx.ScrolledWindow):
             self.plate_operations[platecallercombobox.rowposition] = myopobject 
         myopobject.plate = event.GetString()
 
-    def getRowFiringEvent(self,event):
-        pass
-
-
 
     def on_operation_combobox_select(self,event,operationcombobox):
 
@@ -787,6 +802,10 @@ class PlateOperations(wx.ScrolledWindow):
                 # Need to lambda the combobox so we can know which row the event came from
                 new_platechoice_combobox.Bind(wx.EVT_COMBOBOX,lambda event,platecallercombobox=new_platechoice_combobox : self.on_plate_combobox_select(event,platecallercombobox))
                 new_platechoice_combobox.Bind(wx.EVT_RIGHT_DOWN,lambda event,platecallercombobox=new_platechoice_combobox : self.delete_operation(event,platecallercombobox))
+                try:
+                    new_platechoice_combobox.GetChildren()[1].Bind(wx.EVT_RIGHT_DOWN,lambda event,platecallercombobox=new_platechoice_combobox : self.delete_operation(event,platecallercombobox))
+                except:
+                    pass
                 new_dispense_combobox = PromptingComboBox(self,"", choices=self.choices, style=wx.CB_SORT,size=(280,-1),rowposition=currentrowpos)
                 new_dispense_combobox.Bind(wx.EVT_COMBOBOX,lambda event,operationcombobox=new_dispense_combobox : self.on_operation_combobox_select(event,operationcombobox))
                 self.plate_combobox_objects.append(new_platechoice_combobox)
@@ -1014,6 +1033,10 @@ class PlateOperations(wx.ScrolledWindow):
             self.GetParent().GetStatusBar().SetBackgroundColour(wx.Colour(255,204,153))
             self.GetParent().GetStatusBar().SetStatusText(e.message)
 
+    def save_session(self,event):
+        print yaml.dump(self.plate_operations)
+
+
 
         
 class MpPanel(wx.ScrolledWindow):
@@ -1027,8 +1050,10 @@ class MpPanel(wx.ScrolledWindow):
         self.file_name_text = wx.TextCtrl(self,-1,"test")
         self.add_op_button = wx.Button(self,label="Add Operation")
         self.make_plate_button = wx.Button(self,label="Make Plate")
+        self.save_session_button = wx.Button(self,label="Save Session")
         self.Bind(wx.EVT_BUTTON,self.GetParent().FindWindowByName("plateop").add_operation,self.add_op_button)
         self.Bind(wx.EVT_BUTTON,self.GetParent().FindWindowByName("plateop").make_plate,self.make_plate_button)
+        self.Bind(wx.EVT_BUTTON, self.save_session,self.save_session_button)
         self.szr = wx.FlexGridSizer(3,2,10,10)
         self.szr.Add(self.add_op_button)
         self.szr.Add(self.make_plate_button)
@@ -1036,9 +1061,17 @@ class MpPanel(wx.ScrolledWindow):
         self.szr.Add(self.volttc)
         self.szr.Add(self.filenamelabel)
         self.szr.Add(self.file_name_text)
+        self.szr.Add(self.save_session_button)
         self.SetSizer(self.szr)
         self.szr.FitInside(self)
         self.Layout()
+
+    def save_session(self,event):
+        self.GetParent().FindWindowByName("platesetup").save_session(event)
+        self.GetParent().FindWindowByName("components").save_session(event)
+        self.GetParent().FindWindowByName("plateop").save_session(event)
+
+        event.Skip()
 
 
 class OperationObject():
