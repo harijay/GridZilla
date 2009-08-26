@@ -28,12 +28,19 @@ class MaFrame(wx.Frame):
         kwds["style"] = wx.THICK_FRAME
         frame_sizer = wx.BoxSizer(wx.VERTICAL)
         self.SetSizer(frame_sizer)
+        self.session_file = open("mysession.gzs","w")
     
     def do_layout(self):
         self.Layout()
 #        self.Fit()
-    def save_session(self):
-        pass
+
+    def save_session(self,event):
+        self.FindWindowByName("platesetup").save_session(event,self.session_file)
+        self.FindWindowByName("components").save_session(event,self.session_file)
+        self.FindWindowByName("plateop").save_session(event,self.session_file)
+        self.session_file.close()
+        event.Skip()
+        
         
 class Validate_Plate_Coordinate(wx.PyValidator):
 
@@ -316,8 +323,9 @@ class PlatePanel(wx.ScrolledWindow):
             win2.Bind(wx.EVT_TEXT,self.set_plateconfig_status_false)
         event.Skip()
     
-    def save_session(self,event):
-        print yaml.dump(self.plate_setup_dict)
+    def save_session(self,event,filehandle):
+        yaml.dump(self.plate_setup_dict,filehandle)
+        print  yaml.dump(self.plate_setup_dict)
         print self.plate_setup_dict
     
 #
@@ -567,7 +575,9 @@ class  ComponentPanel(wx.ScrolledWindow):
         self.GetParent().FindWindowByName("plateop").make_component_choice_list()
         self.IS_CONFIGURED = True
         
-    def save_session(self,event):
+    def save_session(self,event,filehandle):
+        yaml.dump(self.component_namedict,filehandle)
+        yaml.dump(self.buffer_namedict,filehandle)
         print yaml.dump(self.component_namedict)
         print yaml.dump(self.buffer_namedict)
         event.Skip()
@@ -1033,7 +1043,8 @@ class PlateOperations(wx.ScrolledWindow):
             self.GetParent().GetStatusBar().SetBackgroundColour(wx.Colour(255,204,153))
             self.GetParent().GetStatusBar().SetStatusText(e.message)
 
-    def save_session(self,event):
+    def save_session(self,event,filehandle):
+        yaml.dump(self.plate_operations,filehandle)
         print yaml.dump(self.plate_operations)
 
 
@@ -1053,7 +1064,7 @@ class MpPanel(wx.ScrolledWindow):
         self.save_session_button = wx.Button(self,label="Save Session")
         self.Bind(wx.EVT_BUTTON,self.GetParent().FindWindowByName("plateop").add_operation,self.add_op_button)
         self.Bind(wx.EVT_BUTTON,self.GetParent().FindWindowByName("plateop").make_plate,self.make_plate_button)
-        self.Bind(wx.EVT_BUTTON, self.save_session,self.save_session_button)
+        self.Bind(wx.EVT_BUTTON, self.GetParent().save_session,self.save_session_button)
         self.szr = wx.FlexGridSizer(3,2,10,10)
         self.szr.Add(self.add_op_button)
         self.szr.Add(self.make_plate_button)
@@ -1066,12 +1077,7 @@ class MpPanel(wx.ScrolledWindow):
         self.szr.FitInside(self)
         self.Layout()
 
-    def save_session(self,event):
-        self.GetParent().FindWindowByName("platesetup").save_session(event)
-        self.GetParent().FindWindowByName("components").save_session(event)
-        self.GetParent().FindWindowByName("plateop").save_session(event)
 
-        event.Skip()
 
 
 class OperationObject():
@@ -1092,7 +1098,7 @@ if __name__=="__main__":
     plateoperations = PlateOperations(parent=maframe,name="plateop")
     maframe.GetSizer().Add(component_panel,4,wx.ALIGN_BOTTOM|wx.EXPAND)
     holistic = MpPanel(maframe,name="mpanel")
-    maframe.GetSizer().Add(holistic,3,wx.EXPAND)
+    maframe.GetSizer().Add(holistic,4,wx.EXPAND)
     maframe.GetSizer().Add(plateoperations,6,wx.ALIGN_BOTTOM|wx.EXPAND)
     maframe.Layout()
     maframe.Show()
