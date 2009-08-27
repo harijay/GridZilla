@@ -20,21 +20,52 @@ class MaFrame(wx.Frame):
     
     PLATE_CONFIGURED = False
     IS_BEGUN = True
+    dirtowriteto = None
     
     def __init__(self,*args,**kwds):
         kwds["size"] = MYFRAMESIZE
         wx.Frame.__init__(self,*args, **kwds)
         self.CreateStatusBar(1,0)
         kwds["style"] = wx.THICK_FRAME
-        frame_sizer = wx.BoxSizer(wx.VERTICAL)
-        self.SetSizer(frame_sizer)
-        self.session_file = open("mysession.gzs","w")
+        self.frame_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.plate_panel = PlatePanel(parent=self,name="platesetup")
+        self.frame_sizer.Add(self.plate_panel,4,wx.EXPAND)
+        self.component_panel = ComponentPanel(parent=self,name="components")
+        self.plateoperations = PlateOperations(parent=self,name="plateop")
+        self.frame_sizer.Add(self.component_panel,5,wx.ALIGN_BOTTOM|wx.EXPAND)
+        self.holistic = MpPanel(self,name="mpanel")
+        self.frame_sizer.Add(self.holistic,3,wx.EXPAND)
+        self.frame_sizer.Add(self.plateoperations,5,wx.ALIGN_BOTTOM|wx.EXPAND)
+        self.SetSizer(self.frame_sizer)
+        
     
     def do_layout(self):
         self.Layout()
 #        self.Fit()
 
     def save_session(self,event):
+        try :
+            if self.dirtowriteto == None :
+                if os.environ.has_key("HOME"):
+                    adialog = wx.DirDialog(self,message="Directory for dispense files",defaultPath=os.environ["HOME"])
+                    adialog.ShowModal()
+                    print "getting dialog"
+                    self.dirtowriteto = adialog.GetPath()
+                    print "ALL OUTPUT TO DIR %s" % self.dirtowriteto
+                    self.session_file = open(os.path.join(self.dirtowriteto ,"%s.gzs" % str(self.holistic.file_name_text.GetValue())),"w")
+                else:
+                    adialog = wx.DirDialog(self,message="Directory for dispense files",defaultPath=os.path.join(os.environ["HOMEDRIVE"],os.environ["HOMEPATH"]))
+                    adialog.ShowModal()
+                    print "getting dialog"
+                    self.dirtowriteto = adialog.GetPath()
+                    print "ALL OUTPUT TO DIR %s" % self.dirtowriteto
+                    self.session_file = open(os.path.join(self.dirtowriteto ,"%s.gzs" % str(self.holistic.file_name_text.GetValue())),"w")
+            else :
+                self.session_file = open(os.path.join(self.dirtowriteto ,"%s.gzs" % str(self.holistic.file_name_text.GetValue())),"w")
+            
+        except KeyError , k :
+            print "Not Linux/Mac/Windows I see"
+            pass
         self.FindWindowByName("platesetup").save_session(event,self.session_file)
         self.FindWindowByName("components").save_session(event,self.session_file)
         self.FindWindowByName("plateop").save_session(event,self.session_file)
@@ -370,15 +401,15 @@ class  ComponentPanel(wx.ScrolledWindow):
         self.component_number_slot = wx.StaticText(parent=self,id=-1,label="",size=(-1,-1))
         self.component_name_label = wx.StaticText(self, -1, "Component Name",style=wx.ALIGN_CENTER)
         self.component_conc_label = wx.StaticText(self,-1,"Concentration",style=wx.ALIGN_CENTER)
-        self.component_volume_label = wx.StaticText(self,-1,"Volume",style=wx.ALIGN_CENTER)
+        self.component_volume_label = wx.StaticText(self,-1,u"Volume in \xb5l",style=wx.ALIGN_CENTER)
         self.component_ph_label = wx.StaticText(self,-1,"pH",style=wx.ALIGN_CENTER)
         self.component_pka_label = wx.StaticText(self,-1,"pKa",style=wx.ALIGN_CENTER)
-        self.top_grid_sizer.Add(self.component_number_slot,1,wx.EXPAND|wx.ALIGN_CENTER)
-        self.top_grid_sizer.Add(self.component_name_label,1,wx.EXPAND|wx.ALIGN_CENTER)
-        self.top_grid_sizer.Add(self.component_conc_label,1,wx.EXPAND|wx.ALIGN_CENTER)
-        self.top_grid_sizer.Add(self.component_volume_label,wx.EXPAND|wx.ALIGN_CENTER)
-        self.top_grid_sizer.Add(self.component_ph_label,1,wx.EXPAND|wx.ALIGN_CENTER)
-        self.top_grid_sizer.Add(self.component_pka_label,1,wx.EXPAND|wx.ALIGN_CENTER)
+        self.top_grid_sizer.Add(self.component_number_slot,wx.ALIGN_CENTER)
+        self.top_grid_sizer.Add(self.component_name_label,1,wx.ALIGN_CENTER)
+        self.top_grid_sizer.Add(self.component_conc_label,1,wx.ALIGN_CENTER)
+        self.top_grid_sizer.Add(self.component_volume_label,1,wx.ALIGN_CENTER)
+        self.top_grid_sizer.Add(self.component_ph_label,1,wx.ALIGN_CENTER)
+        self.top_grid_sizer.Add(self.component_pka_label,1,wx.ALIGN_CENTER)
         self.do_connections()
         self.bind_delete_events()
         self.SetScrollRate(3, 3)
@@ -646,7 +677,7 @@ class PlateOperations(wx.ScrolledWindow):
     # Combobox choices populated by events that propagate from above
     component_frame_choices = []
     buffer_frame_choices = []
-    dirtowriteto = None
+
 
     # plate_id_mapper_dict maps plate components to their row positions
     plate_id_mapper_dict = {}
@@ -930,23 +961,23 @@ class PlateOperations(wx.ScrolledWindow):
             wx.MessageBox("Plate configuration changed: Continuing regardless : Please check Dispense data")
         
         try :
-            if self.dirtowriteto == None :
+            if self.GetParent().dirtowriteto == None :
                 if os.environ.has_key("HOME"):
                     adialog = wx.DirDialog(self,message="Directory for dispense files",defaultPath=os.environ["HOME"])
                     adialog.ShowModal()
                     print "getting dialog"
-                    self.dirtowriteto = adialog.GetPath()
-                    print "ALL OUTPUT TO DIR %s" % self.dirtowriteto
-                    scrfile = open(os.path.join(self.dirtowriteto ,"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())),"w")
+                    self.GetParent().dirtowriteto = adialog.GetPath()
+                    print "ALL OUTPUT TO DIR %s" % self.GetParent().dirtowriteto
+                    scrfile = open(os.path.join(self.GetParent().dirtowriteto ,"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())),"w")
                 else:
                     adialog = wx.DirDialog(self,message="Directory for dispense files",defaultPath=os.path.join(os.environ["HOMEDRIVE"],os.environ["HOMEPATH"]))
                     adialog.ShowModal()
                     print "getting dialog"
-                    self.dirtowriteto = adialog.GetPath()
-                    print "ALL OUTPUT TO DIR %s" % self.dirtowriteto
-                    scrfile = open(os.path.join(self.dirtowriteto ,"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())),"w")
+                    self.GetParent().dirtowriteto = adialog.GetPath()
+                    print "ALL OUTPUT TO DIR %s" % self.GetParent().dirtowriteto
+                    scrfile = open(os.path.join(self.GetParent().dirtowriteto ,"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())),"w")
             else :
-                scrfile = open(os.path.join(self.dirtowriteto ,"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())),"w")
+                scrfile = open(os.path.join(self.GetParent().dirtowriteto ,"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())),"w")
             
         except KeyError , k :
             print "Not Linux/Mac/Windows I see"
@@ -1022,17 +1053,17 @@ class PlateOperations(wx.ScrolledWindow):
 #        scrfile.write("pwhole = plate.Plate(\"A1\",\"H12\",mp)\n")
 #        scrfile.write("pwhole.fill_water(water)\n")
         scrfile.write("mp.printwellinfo()\n")
-        scrfile.write("mp.makefileforformulatrix(r\"%s\")\n" % str(os.path.join(self.dirtowriteto,"%s.dl.txt" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
-        scrfile.write("mp.writepdf(r\"%s\")\n" % str(os.path.join(self.dirtowriteto,"%s" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
+        scrfile.write("mp.makefileforformulatrix(r\"%s\")\n" % str(os.path.join(self.GetParent().dirtowriteto,"%s.dl.txt" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
+        scrfile.write("mp.writepdf(r\"%s\")\n" % str(os.path.join(self.GetParent().dirtowriteto,"%s" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
 
 
-#        scrfile.write("mp.printpdf(r\"%s\")\n" % str((os.path.join(self.dirtowriteto,"%s_volumes" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))))
+#        scrfile.write("mp.printpdf(r\"%s\")\n" % str((os.path.join(self.GetParent().dirtowriteto,"%s_volumes" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))))
 
         scrfile.close()
         try:
-            execfile(os.path.join(self.dirtowriteto,"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
-            self.GetParent().GetStatusBar().SetStatusText("DISPENSE LIST %s OUTPUT  " % str(os.path.join(self.dirtowriteto,"%s.dl.txt" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
-            self.GetParent().GetStatusBar().SetStatusText("FILES OUTPUT with prefix %s" % str(os.path.join(self.dirtowriteto,"%s" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
+            execfile(os.path.join(self.GetParent().dirtowriteto,"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
+            self.GetParent().GetStatusBar().SetStatusText("DISPENSE LIST %s OUTPUT  " % str(os.path.join(self.GetParent().dirtowriteto,"%s.dl.txt" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
+            self.GetParent().GetStatusBar().SetStatusText("FILES OUTPUT with prefix %s" % str(os.path.join(self.GetParent().dirtowriteto,"%s" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
             self.GetParent().GetStatusBar().SetBackgroundColour(wx.Colour(204,255,204))
         
 #        except plateliberror.PlatelibException , p :
@@ -1092,14 +1123,6 @@ if __name__=="__main__":
     
     app = wx.PySimpleApp()
     maframe = MaFrame(parent=None,title="GZilla")
-    plate_panel = PlatePanel(parent=maframe,name="platesetup")
-    maframe.GetSizer().Add(plate_panel,5,wx.EXPAND)
-    component_panel = ComponentPanel(parent=maframe,name="components")
-    plateoperations = PlateOperations(parent=maframe,name="plateop")
-    maframe.GetSizer().Add(component_panel,4,wx.ALIGN_BOTTOM|wx.EXPAND)
-    holistic = MpPanel(maframe,name="mpanel")
-    maframe.GetSizer().Add(holistic,4,wx.EXPAND)
-    maframe.GetSizer().Add(plateoperations,6,wx.ALIGN_BOTTOM|wx.EXPAND)
     maframe.Layout()
     maframe.Show()
     # Debug using this tool
