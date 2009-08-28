@@ -21,7 +21,7 @@ class MaFrame(wx.Frame):
     PLATE_CONFIGURED = False
     IS_BEGUN = True
     dirtowriteto = None
-    
+    session_dict = {}
     def __init__(self,*args,**kwds):
         kwds["size"] = MYFRAMESIZE
         wx.Frame.__init__(self,*args, **kwds)
@@ -34,10 +34,15 @@ class MaFrame(wx.Frame):
         self.plateoperations = PlateOperations(parent=self,name="plateop")
         self.frame_sizer.Add(self.component_panel,5,wx.ALIGN_BOTTOM|wx.EXPAND)
         self.holistic = MpPanel(self,name="mpanel")
-        self.frame_sizer.Add(self.holistic,4,wx.EXPAND)
+        self.frame_sizer.Add(self.holistic,5,wx.EXPAND)
         self.frame_sizer.Add(self.plateoperations,5,wx.ALIGN_BOTTOM|wx.EXPAND)
         self.SetSizer(self.frame_sizer)
-        
+        self.filemenu = wx.Menu()
+        rsf = self.filemenu.Append(-1,"Read session file")
+        self.Bind(wx.EVT_MENU,self.read_session,rsf)
+        self.menubar = wx.MenuBar()
+        self.menubar.Append(self.filemenu, "&File")
+        self.SetMenuBar(self.menubar)
     
     def do_layout(self):
         self.Layout()
@@ -52,26 +57,30 @@ class MaFrame(wx.Frame):
                     print "getting dialog"
                     self.dirtowriteto = adialog.GetPath()
                     print "ALL OUTPUT TO DIR %s" % self.dirtowriteto
-                    self.session_file = open(os.path.join(self.dirtowriteto ,"%s.gzs" % str(self.holistic.file_name_text.GetValue())),"w")
+                    self.session_file = open(os.path.join(self.dirtowriteto ,"%s.yaml" % str(self.holistic.file_name_text.GetValue())),"w")
                 else:
                     adialog = wx.DirDialog(self,message="Directory for dispense files",defaultPath=os.path.join(os.environ["HOMEDRIVE"],os.environ["HOMEPATH"]))
                     adialog.ShowModal()
                     print "getting dialog"
                     self.dirtowriteto = adialog.GetPath()
                     print "ALL OUTPUT TO DIR %s" % self.dirtowriteto
-                    self.session_file = open(os.path.join(self.dirtowriteto ,"%s.gzs" % str(self.holistic.file_name_text.GetValue())),"w")
+                    self.session_file = open(os.path.join(self.dirtowriteto ,"%s.yaml" % str(self.holistic.file_name_text.GetValue())),"w")
             else :
-                self.session_file = open(os.path.join(self.dirtowriteto ,"%s.gzs" % str(self.holistic.file_name_text.GetValue())),"w")
+                self.session_file = open(os.path.join(self.dirtowriteto ,"%s.yaml" % str(self.holistic.file_name_text.GetValue())),"w")
             
         except KeyError , k :
             print "Not Linux/Mac/Windows I see"
             pass
-        self.FindWindowByName("platesetup").save_session(event,self.session_file)
-        self.FindWindowByName("components").save_session(event,self.session_file)
-        self.FindWindowByName("plateop").save_session(event,self.session_file)
+        self.FindWindowByName("platesetup").save_session(event,self.session_dict)
+        self.FindWindowByName("components").save_session(event,self.session_dict)
+        self.FindWindowByName("plateop").save_session(event,self.session_dict)
+        yaml.dump(self.session_dict,self.session_file)
         self.session_file.close()
         event.Skip()
-        
+
+    def read_session(self,event):
+        self.session_dict = yaml.load(open(str(wx.FileSelector("Session YAML File \"*.yaml\" format","","","yaml","*.yaml")), "r"))
+        print self.session_dict
         
 class Validate_Plate_Coordinate(wx.PyValidator):
 
@@ -354,12 +363,12 @@ class PlatePanel(wx.ScrolledWindow):
             win2.Bind(wx.EVT_TEXT,self.set_plateconfig_status_false)
         event.Skip()
     
-    def save_session(self,event,filehandle):
+    def save_session(self,event,session_dict):
         for platespec in self.plate_setup_dict.keys():
-            filehandle.write("Plate %s: " % platespec)
-            yaml.dump(self.plate_setup_dict[platespec],filehandle)
+            tmp_dict = {}
+            tmp_dict["Plate %s" % platespec]=self.plate_setup_dict[platespec]
             
-        filehandle.write("---\n")
+        session_dict["plates"] = tmp_dict
         print  yaml.dump(self.plate_setup_dict)
         print self.plate_setup_dict
     
@@ -610,16 +619,16 @@ class  ComponentPanel(wx.ScrolledWindow):
         self.GetParent().FindWindowByName("plateop").make_component_choice_list()
         self.IS_CONFIGURED = True
         
-    def save_session(self,event,filehandle):
+    def save_session(self,event,session_dict):
         print self.component_namedict.keys()
+        tmp_comp_dict = {}
+        tmp_buffer_dict = {}
         for key in self.component_namedict.keys():
-            print key
-            filehandle.write(u"Component %s: " % key)
-            yaml.dump(self.component_namedict[key],filehandle)
+            tmp_comp_dict["Component %s" % key] = self.component_namedict[key]
+        session_dict["components"] = tmp_comp_dict
         for key in self.buffer_namedict.keys():
-            filehandle.write("Buffer %s: " % str(key))
-            yaml.dump(self.buffer_namedict[key],filehandle)
-        filehandle.write("---\n")
+            tmp_buffer_dict["Buffer %s: " % str(key)] = self.buffer_namedict[key]
+        session_dict["buffers"] = tmp_buffer_dict
         print yaml.dump(self.component_namedict)
         print yaml.dump(self.buffer_namedict)
         event.Skip()
@@ -1085,14 +1094,13 @@ class PlateOperations(wx.ScrolledWindow):
             self.GetParent().GetStatusBar().SetBackgroundColour(wx.Colour(255,204,153))
             self.GetParent().GetStatusBar().SetStatusText(e.message)
 
-    def save_session(self,event,filehandle):
+    def save_session(self,event,session_dict):
         for key in self.plate_operations.keys():
             tmp_dict = {}
             myobj = self.plate_operations[key]
             tmp_dict["Operation %s" % key] = myobj.__dict__
-            yaml.dump(tmp_dict,filehandle)
-        filehandle.write("---\n")
-        print yaml.dump(self.plate_operations)
+        session_dict["operations"] = tmp_dict
+
 
 
 
