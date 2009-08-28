@@ -34,7 +34,7 @@ class MaFrame(wx.Frame):
         self.plateoperations = PlateOperations(parent=self,name="plateop")
         self.frame_sizer.Add(self.component_panel,5,wx.ALIGN_BOTTOM|wx.EXPAND)
         self.holistic = MpPanel(self,name="mpanel")
-        self.frame_sizer.Add(self.holistic,3,wx.EXPAND)
+        self.frame_sizer.Add(self.holistic,4,wx.EXPAND)
         self.frame_sizer.Add(self.plateoperations,5,wx.ALIGN_BOTTOM|wx.EXPAND)
         self.SetSizer(self.frame_sizer)
         
@@ -355,7 +355,11 @@ class PlatePanel(wx.ScrolledWindow):
         event.Skip()
     
     def save_session(self,event,filehandle):
-        yaml.dump(self.plate_setup_dict,filehandle)
+        for platespec in self.plate_setup_dict.keys():
+            filehandle.write("Plate %s: " % platespec)
+            yaml.dump(self.plate_setup_dict[platespec],filehandle)
+            
+        filehandle.write("---\n")
         print  yaml.dump(self.plate_setup_dict)
         print self.plate_setup_dict
     
@@ -387,7 +391,7 @@ class  ComponentPanel(wx.ScrolledWindow):
         wx.ScrolledWindow.__init__(self,*args,**kwds)
 #        self.SetBackgroundColour(wx.Colour(252,244,222))
         self.SetBackgroundColour(wx.Colour(133,133,133))
-        self.top_grid_sizer = wx.GridSizer(rows=-1, cols=6, hgap=5, vgap=5)
+        self.top_grid_sizer = wx.FlexGridSizer(rows=-1, cols=6, hgap=20, vgap=10)
         self.fileselector_button = wx.Button(parent=self,id=-1,label="Component File")
         self.add_component_button = wx.Button(parent=self,id=-1,label="Add Component")
         self.add_buffer_button = wx.Button(parent=self,id=-1,label="Add Buffer")
@@ -404,7 +408,7 @@ class  ComponentPanel(wx.ScrolledWindow):
         self.component_volume_label = wx.StaticText(self,-1,u"Volume in \xb5l",style=wx.ALIGN_CENTER)
         self.component_ph_label = wx.StaticText(self,-1,"pH",style=wx.ALIGN_CENTER)
         self.component_pka_label = wx.StaticText(self,-1,"pKa",style=wx.ALIGN_CENTER)
-        self.top_grid_sizer.Add(self.component_number_slot,wx.ALIGN_CENTER)
+        self.top_grid_sizer.Add(self.component_number_slot,1,wx.ALIGN_CENTER)
         self.top_grid_sizer.Add(self.component_name_label,1,wx.ALIGN_CENTER)
         self.top_grid_sizer.Add(self.component_conc_label,1,wx.ALIGN_CENTER)
         self.top_grid_sizer.Add(self.component_volume_label,1,wx.ALIGN_CENTER)
@@ -607,8 +611,15 @@ class  ComponentPanel(wx.ScrolledWindow):
         self.IS_CONFIGURED = True
         
     def save_session(self,event,filehandle):
-        yaml.dump(self.component_namedict,filehandle)
-        yaml.dump(self.buffer_namedict,filehandle)
+        print self.component_namedict.keys()
+        for key in self.component_namedict.keys():
+            print key
+            filehandle.write(u"Component %s: " % key)
+            yaml.dump(self.component_namedict[key],filehandle)
+        for key in self.buffer_namedict.keys():
+            filehandle.write("Buffer %s" % str(key))
+            yaml.dump(self.buffer_namedict[key],filehandle)
+        filehandle.write("---\n")
         print yaml.dump(self.component_namedict)
         print yaml.dump(self.buffer_namedict)
         event.Skip()
