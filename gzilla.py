@@ -80,7 +80,51 @@ class MaFrame(wx.Frame):
 
     def read_session(self,event):
         self.session_dict = yaml.load(open(str(wx.FileSelector("Session YAML File \"*.yaml\" format","","","yaml","*.yaml")), "r"))
-        print self.session_dict
+        # Get Plate dict
+        plates_dict = self.session_dict["plates"]
+        sorted_plates = sorted(plates_dict.keys())
+        for key in sorted_plates:
+            self.GetStatusBar().SetStatusText("Adding Plate %s" % key.split()[1])
+            platelabel = wx.StaticText(self.plate_panel,id=-1,label=key, size=(-1,-1),style=wx.ALIGN_CENTER )
+            text_ctrl_1 = wx.TextCtrl(self.plate_panel, -1,plates_dict[key][0],(50,-1))
+            text_ctrl_2 = wx.TextCtrl(self.plate_panel,-1,plates_dict[key][1],(50,-1))
+            self.plate_panel.master_sizer.Add(platelabel,1,wx.ALIGN_CENTER)
+            self.plate_panel.master_sizer.Add(text_ctrl_1,1,wx.ALIGN_CENTER)
+            self.plate_panel.master_sizer.Add(text_ctrl_2,1,wx.ALIGN_CENTER)
+            self.plate_panel.master_sizer.Layout()
+            #self.sizer_top.Add(self.plate_add_button,1,wx.RIGHT|wx.ALIGN_BOTTOM,10)
+
+
+            self.plate_panel.bind_delete_events()
+
+            self.plate_panel.master_sizer.Layout()
+#            self.plate_panel.master_sizer.Fit(self)
+
+            self.plate_panel.num_subplates = self.plate_panel.num_subplates + 1
+            self.do_layout()
+            #self.GetParent().Fit()
+            self.PLATE_CONFIGURED=True
+            event.Skip()
+        components_dict = self.session_dict["components"]
+        sorted_components_dict_keys = sorted(components_dict.keys())
+        for key in sorted_components_dict_keys:
+            print key
+            componentlabel = wx.StaticText(parent=self.component_panel,id=-1,label=key ,style=wx.ALIGN_CENTER)
+            text_ctrl_1 = wx.TextCtrl(self.component_panel, -1, components_dict[key][0],(-1,-1))
+            text_ctrl_2 = wx.TextCtrl(self.component_panel,-1,components_dict[key][1],(-1,-1))
+            text_ctrl_3 = wx.TextCtrl(self.component_panel,-1,components_dict[key][2],(-1,-1))
+            self.component_panel.top_grid_sizer.Add(componentlabel,1,wx.ALIGN_LEFT|wx.ALIGN_CENTER)
+            self.component_panel.top_grid_sizer.Add(text_ctrl_1,1,wx.ALIGN_CENTER)
+            self.component_panel.top_grid_sizer.Add(text_ctrl_2,1,wx.ALIGN_CENTER)
+            self.component_panel.top_grid_sizer.Add(text_ctrl_3,1,wx.ALIGN_CENTER)
+            dummypanel1 = wx.Panel(self.component_panel,-1,(1,1))
+            dummypanel1.SetBackgroundColour(wx.Colour(133,133,133))
+            dummypanel2 = wx.Panel(self.component_panel,-1,(1,1))
+            dummypanel2.SetBackgroundColour(wx.Colour(133,133,133))
+            self.component_panel.top_grid_sizer.Add(dummypanel1)
+            self.component_panel.top_grid_sizer.Add(dummypanel2)
+        self.Fit()
+        self.do_layout()
         
 class Validate_Plate_Coordinate(wx.PyValidator):
 
@@ -221,8 +265,10 @@ class PlatePanel(wx.ScrolledWindow):
         self.num_subplates = self.num_subplates + 1
         self.GetParent().do_layout()
         #self.GetParent().Fit()
-        self.set_plateconfig_status_false(event)
+        # We dont want add plate to mess with configuration
+        # self.set_plateconfig_status_false(event)
         event.Skip()
+
     
     def bind_delete_events(self):
         import re
@@ -364,8 +410,8 @@ class PlatePanel(wx.ScrolledWindow):
         event.Skip()
     
     def save_session(self,event,session_dict):
+        tmp_dict = {}
         for platespec in self.plate_setup_dict.keys():
-            tmp_dict = {}
             tmp_dict["Plate %s" % platespec]=self.plate_setup_dict[platespec]
             
         session_dict["plates"] = tmp_dict
@@ -624,7 +670,8 @@ class  ComponentPanel(wx.ScrolledWindow):
         tmp_comp_dict = {}
         tmp_buffer_dict = {}
         for key in self.component_namedict.keys():
-            tmp_comp_dict["Component %s" % key] = self.component_namedict[key]
+            displaykey = int(key) -1
+            tmp_comp_dict["Component %s" % displaykey] = self.component_namedict[key]
         session_dict["components"] = tmp_comp_dict
         for key in self.buffer_namedict.keys():
             tmp_buffer_dict["Buffer %s: " % str(key)] = self.buffer_namedict[key]
