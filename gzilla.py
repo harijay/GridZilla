@@ -617,7 +617,7 @@ class  ComponentPanel(wx.ScrolledWindow):
             filehandle.write(u"Component %s: " % key)
             yaml.dump(self.component_namedict[key],filehandle)
         for key in self.buffer_namedict.keys():
-            filehandle.write("Buffer %s" % str(key))
+            filehandle.write("Buffer %s: " % str(key))
             yaml.dump(self.buffer_namedict[key],filehandle)
         filehandle.write("---\n")
         print yaml.dump(self.component_namedict)
@@ -1086,7 +1086,12 @@ class PlateOperations(wx.ScrolledWindow):
             self.GetParent().GetStatusBar().SetStatusText(e.message)
 
     def save_session(self,event,filehandle):
-        yaml.dump(self.plate_operations,filehandle)
+        for key in self.plate_operations.keys():
+            tmp_dict = {}
+            myobj = self.plate_operations[key]
+            tmp_dict["Operation %s" % key] = myobj.__dict__
+            yaml.dump(tmp_dict,filehandle)
+        filehandle.write("---\n")
         print yaml.dump(self.plate_operations)
 
 
