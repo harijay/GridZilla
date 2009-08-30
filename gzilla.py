@@ -79,53 +79,147 @@ class MaFrame(wx.Frame):
         event.Skip()
 
     def read_session(self,event):
+        evt_delete = wx.CommandEvent(wx.wxEVT_COMMAND_BUTTON_CLICKED,self.plate_panel.refresh_button.GetId())
+        self.plate_panel.delete_all_plates(evt_delete)
         self.session_dict = yaml.load(open(str(wx.FileSelector("Session YAML File \"*.yaml\" format","","","yaml","*.yaml")), "r"))
         # Get Plate dict
         plates_dict = self.session_dict["plates"]
-        sorted_plates = sorted(plates_dict.keys())
-        for key in sorted_plates:
-            self.GetStatusBar().SetStatusText("Adding Plate %s" % key.split()[1])
-            platelabel = wx.StaticText(self.plate_panel,id=-1,label=key, size=(-1,-1),style=wx.ALIGN_CENTER )
-            text_ctrl_1 = wx.TextCtrl(self.plate_panel, -1,plates_dict[key][0],(50,-1))
-            text_ctrl_2 = wx.TextCtrl(self.plate_panel,-1,plates_dict[key][1],(50,-1))
-            self.plate_panel.master_sizer.Add(platelabel,1,wx.ALIGN_CENTER)
-            self.plate_panel.master_sizer.Add(text_ctrl_1,1,wx.ALIGN_CENTER)
-            self.plate_panel.master_sizer.Add(text_ctrl_2,1,wx.ALIGN_CENTER)
-            self.plate_panel.master_sizer.Layout()
-            #self.sizer_top.Add(self.plate_add_button,1,wx.RIGHT|wx.ALIGN_BOTTOM,10)
+        if plates_dict is not None:
+            sorted_plates = sorted(plates_dict.keys())
+            for key in sorted_plates:
+                self.GetStatusBar().SetStatusText("Adding Plate %s" % key.split()[1])
+                platelabel = wx.StaticText(self.plate_panel,id=-1,label=key, size=(-1,-1),style=wx.ALIGN_CENTER )
+                text_ctrl_1 = wx.TextCtrl(self.plate_panel, -1,plates_dict[key][0],(50,-1))
+                text_ctrl_2 = wx.TextCtrl(self.plate_panel,-1,plates_dict[key][1],(50,-1))
+                self.plate_panel.master_sizer.Add(platelabel,1,wx.ALIGN_CENTER)
+                self.plate_panel.master_sizer.Add(text_ctrl_1,1,wx.ALIGN_CENTER)
+                self.plate_panel.master_sizer.Add(text_ctrl_2,1,wx.ALIGN_CENTER)
+                self.plate_panel.master_sizer.Layout()
+                #self.sizer_top.Add(self.plate_add_button,1,wx.RIGHT|wx.ALIGN_BOTTOM,10)
+                self.plate_panel.bind_delete_events()
+                self.plate_panel.master_sizer.Layout()
+    #            self.plate_panel.master_sizer.Fit(self)
+                self.plate_panel.num_subplates = self.plate_panel.num_subplates + 1
+                self.do_layout()
+                #self.GetParent().Fit()
+                event = wx.CommandEvent(wx.wxEVT_COMMAND_BUTTON_CLICKED,self.plate_panel.plate_display_button.GetId())
+                event.SetEventObject(self.plate_panel.plate_display_button)
+                self.plate_panel.set_plate_config(event)
+                event.Skip()
 
-
-            self.plate_panel.bind_delete_events()
-
-            self.plate_panel.master_sizer.Layout()
-#            self.plate_panel.master_sizer.Fit(self)
-
-            self.plate_panel.num_subplates = self.plate_panel.num_subplates + 1
-            self.do_layout()
-            #self.GetParent().Fit()
-            self.PLATE_CONFIGURED=True
-            event.Skip()
         components_dict = self.session_dict["components"]
         sorted_components_dict_keys = sorted(components_dict.keys())
-        for key in sorted_components_dict_keys:
-            print key
-            componentlabel = wx.StaticText(parent=self.component_panel,id=-1,label=key ,style=wx.ALIGN_CENTER)
-            text_ctrl_1 = wx.TextCtrl(self.component_panel, -1, components_dict[key][0],(-1,-1))
-            text_ctrl_2 = wx.TextCtrl(self.component_panel,-1,components_dict[key][1],(-1,-1))
-            text_ctrl_3 = wx.TextCtrl(self.component_panel,-1,components_dict[key][2],(-1,-1))
-            self.component_panel.top_grid_sizer.Add(componentlabel,1,wx.ALIGN_LEFT|wx.ALIGN_CENTER)
-            self.component_panel.top_grid_sizer.Add(text_ctrl_1,1,wx.ALIGN_CENTER)
-            self.component_panel.top_grid_sizer.Add(text_ctrl_2,1,wx.ALIGN_CENTER)
-            self.component_panel.top_grid_sizer.Add(text_ctrl_3,1,wx.ALIGN_CENTER)
-            dummypanel1 = wx.Panel(self.component_panel,-1,(1,1))
-            dummypanel1.SetBackgroundColour(wx.Colour(133,133,133))
-            dummypanel2 = wx.Panel(self.component_panel,-1,(1,1))
-            dummypanel2.SetBackgroundColour(wx.Colour(133,133,133))
-            self.component_panel.top_grid_sizer.Add(dummypanel1)
-            self.component_panel.top_grid_sizer.Add(dummypanel2)
+        if sorted_components_dict_keys is not None:
+            for key in sorted_components_dict_keys:
+                print key
+                componentlabel = wx.StaticText(parent=self.component_panel,id=-1,label=key ,style=wx.ALIGN_CENTER)
+                text_ctrl_1 = wx.TextCtrl(self.component_panel, -1, components_dict[key][0],(-1,-1))
+                text_ctrl_2 = wx.TextCtrl(self.component_panel,-1,components_dict[key][1],(-1,-1))
+                text_ctrl_3 = wx.TextCtrl(self.component_panel,-1,components_dict[key][2],(-1,-1))
+                self.component_panel.top_grid_sizer.Add(componentlabel,1,wx.ALIGN_LEFT|wx.ALIGN_CENTER)
+                self.component_panel.top_grid_sizer.Add(text_ctrl_1,1,wx.ALIGN_CENTER)
+                self.component_panel.top_grid_sizer.Add(text_ctrl_2,1,wx.ALIGN_CENTER)
+                self.component_panel.top_grid_sizer.Add(text_ctrl_3,1,wx.ALIGN_CENTER)
+                dummypanel1 = wx.Panel(self.component_panel,-1,(1,1))
+                dummypanel1.SetBackgroundColour(wx.Colour(133,133,133))
+                dummypanel2 = wx.Panel(self.component_panel,-1,(1,1))
+                dummypanel2.SetBackgroundColour(wx.Colour(133,133,133))
+                self.component_panel.top_grid_sizer.Add(dummypanel1)
+                self.component_panel.top_grid_sizer.Add(dummypanel2)
+                self.component_panel.num_components = self.component_panel.num_components + 1
+            self.Fit()
+            self.do_layout()
+        buffers_dict = self.session_dict["buffers"]
+        sorted_buffers_dict_keys = sorted(buffers_dict.keys())
+        if sorted_buffers_dict_keys is not None:
+            for key in sorted_buffers_dict_keys:
+                componentlabel = wx.StaticText(parent=self.component_panel,id=-1,label=key ,style=wx.ALIGN_CENTER)
+                text_ctrl_1 = wx.TextCtrl(self.component_panel, -1,buffers_dict[key][0],(-1,-1))
+                text_ctrl_2 = wx.TextCtrl(self.component_panel,-1,buffers_dict[key][1],(-1,-1))
+                text_ctrl_3 = wx.TextCtrl(self.component_panel,-1,buffers_dict[key][2],(-1,-1))
+                text_ctrl_4 = wx.TextCtrl(self.component_panel,-1,buffers_dict[key][3],(-1,-1))
+                text_ctrl_5 = wx.TextCtrl(self.component_panel,-1,buffers_dict[key][4],(-1,-1))
+                self.component_panel.top_grid_sizer.Add(componentlabel,1,wx.ALIGN_LEFT|wx.ALIGN_CENTER)
+                self.component_panel.top_grid_sizer.Add(text_ctrl_1,1,wx.ALIGN_CENTER)
+                self.component_panel.top_grid_sizer.Add(text_ctrl_2,1,wx.ALIGN_CENTER)
+                self.component_panel.top_grid_sizer.Add(text_ctrl_3,1,wx.ALIGN_CENTER)
+                self.component_panel.top_grid_sizer.Add(text_ctrl_4,1,wx.ALIGN_CENTER)
+                self.component_panel.top_grid_sizer.Add(text_ctrl_5,1,wx.ALIGN_CENTER)
+                self.component_panel.num_components = self.component_panel.num_components + 1
+        event = wx.CommandEvent(wx.wxEVT_COMMAND_BUTTON_CLICKED,self.component_panel.set_component_button.GetId())
+        event.SetEventObject(self.component_panel.set_component_button)
+        self.component_panel.set_components(event)
+        self.component_panel.bind_delete_events()
         self.Fit()
+        self.component_panel.top_grid_sizer.Layout()
         self.do_layout()
-        
+        operations_dict = self.session_dict["operations"]
+        sorted_operations_dict_keys = sorted(operations_dict.keys())
+        if sorted_operations_dict_keys is not None:
+            for key in sorted_operations_dict_keys:
+                operation_row_dict = operations_dict[key]
+                # If  plate then Create plate combobox: set selected to plate
+                selected_plate = operation_row_dict["plate"]
+                plate_choices = operation_row_dict["platelist"]
+                currentrowpos,currentcolpos  = self.plateoperations.po_sizer.CalcRowsCols()
+                new_platechoice_combobox = PromptingComboBox(self.plateoperations,"",choices=plate_choices, style=wx.CB_SORT,rowposition=currentrowpos)
+                # Need to lambda the combobox so we can know which row the event came from
+                new_platechoice_combobox.Bind(wx.EVT_COMBOBOX,lambda event,platecallercombobox=new_platechoice_combobox : self.plateoperations.on_plate_combobox_select(event,platecallercombobox))
+                new_platechoice_combobox.Bind(wx.EVT_RIGHT_DOWN,lambda event,platecallercombobox=new_platechoice_combobox : self.plateoperations.delete_operation(event,platecallercombobox))
+                try:
+                    new_platechoice_combobox.GetChildren()[1].Bind(wx.EVT_RIGHT_DOWN,lambda event,platecallercombobox=new_platechoice_combobox : self.plateoperations.delete_operation(event,platecallercombobox))
+                except:
+                    pass
+                new_dispense_combobox = PromptingComboBox(self.plateoperations,operation_row_dict["op"], choices=operation_row_dict["choices"], style=wx.CB_SORT,size=(280,-1),rowposition=currentrowpos)
+                new_dispense_combobox.Bind(wx.EVT_COMBOBOX,lambda event,operationcombobox=new_dispense_combobox : self.plateoperations.on_operation_combobox_select(event,operationcombobox))
+                self.plateoperations.plate_combobox_objects.append(new_platechoice_combobox)
+                self.plateoperations.dispense_choice_boxlist.append(new_dispense_combobox)
+                self.plateoperations.po_sizer.Add(new_platechoice_combobox,1,wx.EXPAND|wx.ALIGN_CENTER)
+                self.plateoperations.po_sizer.Add(new_dispense_combobox,5,wx.EXPAND|wx.ALIGN_CENTER)
+                new_platechoice_combobox.SetValue(selected_plate)
+                for i in range(8):
+                    dummypanel = wx.Panel(self,-1,size=(260,-1))
+    #                dummypanel.SetBackgroundColour(wx.Colour(112,122,223))
+                    self.plateoperations.po_sizer.Add(dummypanel,1,wx.EXPAND|wx.ALIGN_CENTER)
+                self.plateoperations.do_init_layout()
+                self.Layout()
+                for item in self.plateoperations.plate_combobox_objects:
+                    self.plateoperations.plate_id_mapper_dict[item.GetId()] = item.rowposition
+                   # fire the events for plate selection and operation selection
+                evt = wx.CommandEvent(wx.wxEVT_COMMAND_COMBOBOX_SELECTED, new_platechoice_combobox.GetId())
+                evt.SetEventObject(new_platechoice_combobox)
+                evt.SetInt(new_platechoice_combobox.choices.index(selected_plate))
+                evt.SetString(selected_plate)
+                self.plateoperations.on_plate_combobox_select(evt,new_platechoice_combobox)
+                event_operation = wx.CommandEvent(wx.wxEVT_COMMAND_COMBOBOX_SELECTED,new_dispense_combobox.GetId())
+                event_operation.SetString(operation_row_dict["op"])
+                event_operation.SetEventObject(new_dispense_combobox)
+                self.plateoperations.on_operation_combobox_select(event_operation,new_dispense_combobox)
+                print  self.plateoperations.plate_operations
+                
+                # Create operation box regardless
+                # for components in component_dict create a set of comboboxes with component choices , set the component_dict value
+                # For arg dicts create textcontrols and set value to value in argdict array
+                sorted_compoennt_keys = sorted(operation_row_dict["component_dict"].keys())
+
+                for component_stored_keys in sorted_compoennt_keys:
+                    cbox = self.plateoperations.po_sizer.GetItem(currentrowpos*currentcolpos +  2 + component_stored_keys ).GetWindow()
+                    cbox.SetValue(operation_row_dict["component_dict"][ component_stored_keys])
+                    event = wx.CommandEvent(wx.wxEVT_COMMAND_COMBOBOX_SELECTED,cbox.GetId())
+                    event.SetString(operation_row_dict["component_dict"][ component_stored_keys])
+                    event.SetEventObject(cbox)
+                    self.plateoperations.on_component_comobobox_select(event,cbox,currentrowpos,component_stored_keys)
+                    
+                sorted_arg_keys = sorted(operation_row_dict["argdict"].keys())[::-1]
+                i = 0
+                numcompoboxes = len( sorted_compoennt_keys)
+            
+                for key in sorted_arg_keys:
+                    print "Value",self.plateoperations.po_sizer.GetItem(currentrowpos*currentcolpos +  2 + numcompoboxes + i ).GetWindow().GetValue()
+                    self.plateoperations.po_sizer.GetItem(currentrowpos*currentcolpos +  2 + numcompoboxes + i ).GetWindow().SetValue(operation_row_dict["argdict"][key])
+                    print "Value",self.plateoperations.po_sizer.GetItem(currentrowpos*currentcolpos +  2 + numcompoboxes + i ).GetWindow().GetValue()
+                    i = i + 1
+
 class Validate_Plate_Coordinate(wx.PyValidator):
 
 
@@ -1097,7 +1191,8 @@ class PlateOperations(wx.ScrolledWindow):
             cstring = ""
             for sorted_component in component_keys:
                 cstring = cstring +  objdict[myobj.component_dict[sorted_component]] + " "
-            component_args = ",".join(cstring.split())  
+            component_args = ",".join(cstring.split())
+            print myobj.plate
             com = "p%s.%s(%s,%s)\n" % (myobj.plate.split()[1],self.function_dict[myobj.op],component_args,args)
             print com
             scrfile.write(com)
@@ -1142,10 +1237,14 @@ class PlateOperations(wx.ScrolledWindow):
             self.GetParent().GetStatusBar().SetStatusText(e.message)
 
     def save_session(self,event,session_dict):
-        for key in self.plate_operations.keys():
-            tmp_dict = {}
-            myobj = self.plate_operations[key]
-            tmp_dict["Operation %s" % key] = myobj.__dict__
+        tmp_dict = {}
+        if self.plate_operations.keys():
+            for key in self.plate_operations.keys():
+                myobj = self.plate_operations[key]
+                myobj.platelist =  self.platelist
+                myobj.choices = self.choices
+                myobj.components = self.component_frame_choices
+                tmp_dict["Operation %s" % key] = myobj.__dict__
         session_dict["operations"] = tmp_dict
 
 
