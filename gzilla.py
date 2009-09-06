@@ -81,9 +81,17 @@ class MaFrame(wx.Frame):
     def read_session(self,event):
         evt_delete = wx.CommandEvent(wx.wxEVT_COMMAND_BUTTON_CLICKED,self.plate_panel.refresh_button.GetId())
         self.plate_panel.delete_all_plates(evt_delete)
-        self.session_dict = yaml.load(open(str(wx.FileSelector("Session YAML File \"*.yaml\" format","","","yaml","*.yaml")), "r"))
+        try:
+            self.session_dict = yaml.load(open(str(wx.FileSelector("Session YAML File \"*.yaml\" format","","","yaml","*.yaml")), "r"))
+        except IOError, i:
+            wx.MessageBox("No Such File")
+            event.Skip()
+            return
         # Get Plate dict
         plates_dict = self.session_dict["plates"]
+        masterplate_style = self.session_dict["style"]
+        self.plate_panel.style = masterplate_style
+        self.plate_panel.platestyle.SetSelection(self.plate_panel.styles.index(str(self.plate_panel.style)))
         if plates_dict is not None:
             sorted_plates = sorted(plates_dict.keys())
             for key in sorted_plates:
@@ -109,6 +117,11 @@ class MaFrame(wx.Frame):
 
         components_dict = self.session_dict["components"]
         sorted_components_dict_keys = sorted(components_dict.keys())
+        # If there are components then cleanup
+        if self.component_panel.IS_CONFIGURED  or ( len(self.component_panel.component_namedict.keys())  != 0) or (len(self.component_panel.buffer_namedict.keys())  != 0):
+            delete_event = wx.CommandEvent(wx.wxEVT_COMMAND_BUTTON_CLICKED,self.component_panel.refresh_components_button.GetId())
+            self.component_panel.delete_all_components(delete_event)
+
         if sorted_components_dict_keys is not None:
             for key in sorted_components_dict_keys:
                 print key
@@ -509,6 +522,7 @@ class PlatePanel(wx.ScrolledWindow):
             tmp_dict["Plate %s" % platespec]=self.plate_setup_dict[platespec]
             
         session_dict["plates"] = tmp_dict
+        session_dict["style"] = self.style
         print  yaml.dump(self.plate_setup_dict)
         print self.plate_setup_dict
     
@@ -545,11 +559,14 @@ class  ComponentPanel(wx.ScrolledWindow):
         self.add_component_button = wx.Button(parent=self,id=-1,label="Add Component")
         self.add_buffer_button = wx.Button(parent=self,id=-1,label="Add Buffer")
         self.set_component_button = wx.Button(parent=self,id=-1,label="Configure done")
+        self.refresh_components_button = wx.Button(parent=self,id=-1,label="Delete All Components")
         self.top_grid_sizer.Add(self.fileselector_button)
         self.top_grid_sizer.Add(self.add_component_button)
         self.top_grid_sizer.Add(self.add_buffer_button)
-        self.top_grid_sizer.Add((1,1),1)
-        self.top_grid_sizer.Add((1,1),1)
+        dummy_panel = wx.Panel(self,-1,(1,1))
+        dummy_panel.SetBackgroundColour(wx.Colour(133,133,133))
+        self.top_grid_sizer.Add(dummy_panel)
+        self.top_grid_sizer.Add(self.refresh_components_button)
         self.top_grid_sizer.Add(self.set_component_button)
         self.component_number_slot = wx.StaticText(parent=self,id=-1,label="",size=(-1,-1))
         self.component_name_label = wx.StaticText(self, -1, "Component Name",style=wx.ALIGN_CENTER)
@@ -575,6 +592,7 @@ class  ComponentPanel(wx.ScrolledWindow):
         self.Bind(wx.EVT_BUTTON,self.manual_add_component,self.add_component_button)
         self.Bind(wx.EVT_BUTTON,self.manual_add_buffer,self.add_buffer_button)
         self.Bind(wx.EVT_BUTTON,self.set_components,self.set_component_button)
+        self.Bind(wx.EVT_BUTTON,self.delete_all_components,self.refresh_components_button)
 
     def bind_delete_events(self):
         import re
@@ -628,6 +646,7 @@ class  ComponentPanel(wx.ScrolledWindow):
         self.num_components = self.num_components - 1
         self.top_grid_sizer.Layout()
         self.GetParent().Layout()
+        
         if self.IS_CONFIGURED:
             print self.all_solutionsdict.pop(index/6)
             if self.buffer_namedict.has_key(index/6):
@@ -713,6 +732,49 @@ class  ComponentPanel(wx.ScrolledWindow):
         else:
             event.Skip()
 
+    def delete_all_components(self,event):
+        print "Destroying all components"
+        self.DestroyChildren()
+        rows,cols = self.top_grid_sizer.CalcRowsCols()
+        print "ROWOOOW",rows,cols
+        self.fileselector_button = wx.Button(parent=self,id=-1,label="Component File")
+        self.add_component_button = wx.Button(parent=self,id=-1,label="Add Component")
+        self.add_buffer_button = wx.Button(parent=self,id=-1,label="Add Buffer")
+        self.set_component_button = wx.Button(parent=self,id=-1,label="Configure done")
+        self.refresh_components_button = wx.Button(parent=self,id=-1,label="Delete All Components")
+        self.top_grid_sizer.Add(self.fileselector_button)
+        self.top_grid_sizer.Add(self.add_component_button)
+        self.top_grid_sizer.Add(self.add_buffer_button)
+        dummy_panel = wx.Panel(self,-1,(1,1))
+        dummy_panel.SetBackgroundColour(wx.Colour(133,133,133))
+        self.top_grid_sizer.Add(dummy_panel)
+        self.top_grid_sizer.Add(self.refresh_components_button)
+        self.top_grid_sizer.Add(self.set_component_button)
+        self.component_number_slot = wx.StaticText(parent=self,id=-1,label="",size=(-1,-1))
+        self.component_name_label = wx.StaticText(self, -1, "Component Name",style=wx.ALIGN_CENTER)
+        self.component_conc_label = wx.StaticText(self,-1,"Concentration",style=wx.ALIGN_CENTER)
+        self.component_volume_label = wx.StaticText(self,-1,u"Volume in \xb5l",style=wx.ALIGN_CENTER)
+        self.component_ph_label = wx.StaticText(self,-1,"pH",style=wx.ALIGN_CENTER)
+        self.component_pka_label = wx.StaticText(self,-1,"pKa",style=wx.ALIGN_CENTER)
+        self.top_grid_sizer.Add(self.component_number_slot,1,wx.ALIGN_CENTER)
+        self.top_grid_sizer.Add(self.component_name_label,1,wx.ALIGN_CENTER)
+        self.top_grid_sizer.Add(self.component_conc_label,1,wx.ALIGN_CENTER)
+        self.top_grid_sizer.Add(self.component_volume_label,1,wx.ALIGN_CENTER)
+        self.top_grid_sizer.Add(self.component_ph_label,1,wx.ALIGN_CENTER)
+        self.top_grid_sizer.Add(self.component_pka_label,1,wx.ALIGN_CENTER)
+        self.do_connections()
+        self.bind_delete_events()
+        self.top_grid_sizer.Layout()
+        self.num_components = 1
+        # Old status since we are using set_components to clean stuff up elsewhere
+        status = self.IS_CONFIGURED
+        self.set_components(event)
+        # reset status to old status
+        self.IS_CONFIGURED = status
+        
+
+      
+            
     def set_components(self,event):
         import re
         spaces = re.compile("\s+")
@@ -842,6 +904,7 @@ class PlateOperations(wx.ScrolledWindow):
 
     # plate_id_mapper_dict maps plate components to their row positions
     plate_id_mapper_dict = {}
+
     def __init__(self,*args,**kwds):
         import os
         wx.ScrolledWindow.__init__(self,*args,**kwds)
@@ -1236,6 +1299,24 @@ class PlateOperations(wx.ScrolledWindow):
             self.GetParent().GetStatusBar().SetBackgroundColour(wx.Colour(255,204,153))
             self.GetParent().GetStatusBar().SetStatusText(e.message)
 
+    def delete_all_operations(self,event):
+        rows,cols = self.po_sizer.CalcRowsCols()
+        for rownum in range(rows):
+            w = self.po_sizer.GetItem(rownum*cols).GetWindow()
+            print w
+            if isinstance(w,PromptingComboBox):
+                self.perform_delete(event,w)
+
+#        self.dispense_choice_boxlist= []
+#
+#        self.plate_operations = {}
+#        # Combobox choices populated by events that propagate from above
+#        self.component_frame_choices = []
+#        self.buffer_frame_choices = []
+
+
+    # plate_id_mapper_dict maps plate components to their row positions
+    plate_id_mapper_dict = {}
     def save_session(self,event,session_dict):
         tmp_dict = {}
         if self.plate_operations.keys():
@@ -1263,9 +1344,11 @@ class MpPanel(wx.ScrolledWindow):
         self.add_op_button = wx.Button(self,label="Add Operation")
         self.make_plate_button = wx.Button(self,label="Make Plate")
         self.save_session_button = wx.Button(self,label="Save Session")
+        self.refresh_operations_button = wx.Button(self,label="Delete all operations")
         self.Bind(wx.EVT_BUTTON,self.GetParent().FindWindowByName("plateop").add_operation,self.add_op_button)
         self.Bind(wx.EVT_BUTTON,self.GetParent().FindWindowByName("plateop").make_plate,self.make_plate_button)
         self.Bind(wx.EVT_BUTTON, self.GetParent().save_session,self.save_session_button)
+        self.Bind(wx.EVT_BUTTON,self.GetParent().FindWindowByName("plateop").delete_all_operations,self.refresh_operations_button)
         self.szr = wx.FlexGridSizer(3,2,10,10)
         self.szr.Add(self.add_op_button)
         self.szr.Add(self.make_plate_button)
@@ -1274,6 +1357,7 @@ class MpPanel(wx.ScrolledWindow):
         self.szr.Add(self.filenamelabel)
         self.szr.Add(self.file_name_text)
         self.szr.Add(self.save_session_button)
+        self.szr.Add(self.refresh_operations_button)
         self.SetSizer(self.szr)
         self.szr.FitInside(self)
         self.Layout()
