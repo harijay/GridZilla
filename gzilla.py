@@ -39,7 +39,9 @@ class MaFrame(wx.Frame):
         self.SetSizer(self.frame_sizer)
         self.filemenu = wx.Menu()
         rsf = self.filemenu.Append(-1,"Read session file")
+        exit = self.filemenu.Append(-1,"E&xit")
         self.Bind(wx.EVT_MENU,self.read_session,rsf)
+        self.Bind(wx.EVT_MENU,self.exit_gui,exit)
         self.menubar = wx.MenuBar()
         self.menubar.Append(self.filemenu, "&File")
         self.SetMenuBar(self.menubar)
@@ -48,6 +50,9 @@ class MaFrame(wx.Frame):
         self.Layout()
 #        self.Fit()
 
+    def exit_gui(self,event):
+        # save timestamped session
+        self.Close(1)
     def save_session(self,event):
         try :
             if self.dirtowriteto == None :
@@ -169,6 +174,8 @@ class MaFrame(wx.Frame):
         self.do_layout()
         operations_dict = self.session_dict["operations"]
         sorted_operations_dict_keys = sorted(operations_dict.keys())
+        if len(self.plateoperations.plate_combobox_objects) != 0:
+            self.plateoperations.delete_all_operations(event)
         if sorted_operations_dict_keys is not None:
             for key in sorted_operations_dict_keys:
                 operation_row_dict = operations_dict[key]
@@ -1138,6 +1145,7 @@ class PlateOperations(wx.ScrolledWindow):
     def make_component_choice_list(self):
         self.component_frame_choices = []
         self.buffer_frame_choices = []
+        print "IYSYSY",self.GetParent().FindWindowByName("components").all_solutionsdict,self.GetParent().FindWindowByName("components").buffer_namedict
         try:
             for key in self.GetParent().FindWindowByName("components").all_solutionsdict:
                 self.component_frame_choices.append(self.GetParent().FindWindowByName("components").all_solutionsdict[key][0])
@@ -1161,13 +1169,24 @@ class PlateOperations(wx.ScrolledWindow):
                         except :
                             selected = ""
                             pass
-                        print "REFRESH",w.choices
-                        w.Clear()
-                        w.SetItems(self.component_frame_choices)
-                        if selected in self.component_frame_choices:
-                            w.SetValue(selected)
+                        # Deermine if we expeted a component or a buffer here
+                        if "Buffer" in self.po_sizer.GetItem(row*cols + 1).GetWindow().GetValue():
+                            w.Clear()
+                            print "BUFFER REPLACING" , w.choices,self.buffer_frame_choices
+                            w.SetItems(self.buffer_frame_choices)
+                            if selected in self.component_frame_choices:
+                                w.SetValue(selected)
+                            else:
+                                w.SetValue("")
+
                         else:
-                            w.SetValue("")
+                            print "COMponent REPLACING" , w.choices,self.component_frame_choices
+                            w.Clear()
+                            w.SetItems(self.component_frame_choices)
+                            if selected in self.component_frame_choices:
+                                w.SetValue(selected)
+                            else:
+                                w.SetValue("")
                 except Exception , e:
                     print "Nothing to Refresh"
 
