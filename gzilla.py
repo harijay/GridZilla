@@ -114,7 +114,7 @@ class MaFrame(wx.Frame):
                 event.SetEventObject(self.plate_panel.plate_display_button)
                 self.plate_panel.set_plate_config(event)
                 event.Skip()
-
+        self.PLATE_CONFIGURED = self.session_dict["plate_config_state"]
         components_dict = self.session_dict["components"]
         sorted_components_dict_keys = sorted(components_dict.keys())
         # If there are components then cleanup
@@ -163,6 +163,7 @@ class MaFrame(wx.Frame):
         event.SetEventObject(self.component_panel.set_component_button)
         self.component_panel.set_components(event)
         self.component_panel.bind_delete_events()
+        self.component_panel.IS_CONFIGURED = self.session_dict["component_config_state"]
         self.Fit()
         self.component_panel.top_grid_sizer.Layout()
         self.do_layout()
@@ -596,8 +597,8 @@ class  ComponentPanel(wx.ScrolledWindow):
 
     def bind_delete_events(self):
         import re
-        component_pattern = re.compile("Component  \d")
-        buffer_pattern = re.compile("Buffer  \d")
+        component_pattern = re.compile("Component\s+\d")
+        buffer_pattern = re.compile("Buffer\s+\d")
         for child in self.GetChildren():
             if isinstance(child, wx.StaticText):
 #                print child.GetLabel()
@@ -671,7 +672,7 @@ class  ComponentPanel(wx.ScrolledWindow):
     
     def create_component_gui_entry(self,component_array):
         if len(component_array) == 3:
-            componentlabel = wx.StaticText(parent=self,id=-1,label="Component  %s" % self.num_components ,style=wx.ALIGN_CENTER)
+            componentlabel = wx.StaticText(parent=self,id=-1,label="Component %s" % self.num_components ,style=wx.ALIGN_CENTER)
             text_ctrl_1 = wx.TextCtrl(self, -1, component_array[0],(-1,-1))
             text_ctrl_2 = wx.TextCtrl(self,-1,component_array[1],(-1,-1))
             text_ctrl_3 = wx.TextCtrl(self,-1,component_array[2],(-1,-1))
@@ -689,7 +690,7 @@ class  ComponentPanel(wx.ScrolledWindow):
 
         
         if len(component_array) == 5:
-            componentlabel = wx.StaticText(parent=self,id=-1,label="Buffer  %s" % self.num_components ,style=wx.ALIGN_CENTER)
+            componentlabel = wx.StaticText(parent=self,id=-1,label="Buffer %s" % self.num_components ,style=wx.ALIGN_CENTER)
             text_ctrl_1 = wx.TextCtrl(self, -1, component_array[0],(-1,-1))
             text_ctrl_2 = wx.TextCtrl(self,-1,component_array[1],(-1,-1))
             text_ctrl_3 = wx.TextCtrl(self,-1,component_array[2],(-1,-1))
@@ -828,9 +829,10 @@ class  ComponentPanel(wx.ScrolledWindow):
         for key in self.component_namedict.keys():
             displaykey = int(key) -1
             tmp_comp_dict["Component %s" % displaykey] = self.component_namedict[key]
+        session_dict["component_config_state"] = self.IS_CONFIGURED
         session_dict["components"] = tmp_comp_dict
         for key in self.buffer_namedict.keys():
-            tmp_buffer_dict["Buffer %s: " % str(key)] = self.buffer_namedict[key]
+            tmp_buffer_dict["Buffer %s" % str(key)] = self.buffer_namedict[key]
         session_dict["buffers"] = tmp_buffer_dict
         print yaml.dump(self.component_namedict)
         print yaml.dump(self.buffer_namedict)
@@ -1063,6 +1065,7 @@ class PlateOperations(wx.ScrolledWindow):
                 mynewchoice = self.platelist
                 # Hardcode row position into object for script generation purposes
                 currentrowpos,currentcolpos  = self.po_sizer.CalcRowsCols()
+                print "MBCJMDBCJDCB" ,  currentrowpos,currentcolpos
                 new_platechoice_combobox = PromptingComboBox(self,"",choices=mynewchoice, style=wx.CB_SORT,rowposition=currentrowpos)
                 # Need to lambda the combobox so we can know which row the event came from
                 new_platechoice_combobox.Bind(wx.EVT_COMBOBOX,lambda event,platecallercombobox=new_platechoice_combobox : self.on_plate_combobox_select(event,platecallercombobox))
@@ -1083,6 +1086,7 @@ class PlateOperations(wx.ScrolledWindow):
                     self.po_sizer.Add(dummypanel,1,wx.EXPAND|wx.ALIGN_CENTER)
                 self.do_init_layout()
                 self.GetParent().Layout()
+                print self.plate_combobox_objects
                 for item in self.plate_combobox_objects:
                     self.plate_id_mapper_dict[item.GetId()] = item.rowposition
             else:
@@ -1157,6 +1161,7 @@ class PlateOperations(wx.ScrolledWindow):
                         except :
                             selected = ""
                             pass
+                        print "REFRESH",w.choices
                         w.Clear()
                         w.SetItems(self.component_frame_choices)
                         if selected in self.component_frame_choices:
@@ -1301,11 +1306,14 @@ class PlateOperations(wx.ScrolledWindow):
 
     def delete_all_operations(self,event):
         rows,cols = self.po_sizer.CalcRowsCols()
-        for rownum in range(rows):
-            w = self.po_sizer.GetItem(rownum*cols).GetWindow()
-            print w
-            if isinstance(w,PromptingComboBox):
-                self.perform_delete(event,w)
+        self.DestroyChildren()
+        self.plate_combobox_objects = []
+        self.po_sizer.Clear()
+#        for rownum in range(rows):
+#            w = self.po_sizer.GetItem(rownum*cols).GetWindow()
+#            print w
+#            if isinstance(w,PromptingComboBox):
+#                self.perform_delete(event,w)
 
 #        self.dispense_choice_boxlist= []
 #
@@ -1327,6 +1335,7 @@ class PlateOperations(wx.ScrolledWindow):
                 myobj.components = self.component_frame_choices
                 tmp_dict["Operation %s" % key] = myobj.__dict__
         session_dict["operations"] = tmp_dict
+        session_dict["plate_config_state"] = self.GetParent().PLATE_CONFIGURED
 
 
 
