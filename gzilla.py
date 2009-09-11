@@ -8,7 +8,7 @@ import os.path
 
 import wx
 import wx.lib.scrolledpanel  as myscrolledpanel
-import wx.lib.inspection
+#import wx.lib.inspection
 MYFRAMESIZE = (1212,700)
 import sys
 import yaml
@@ -38,10 +38,15 @@ class MaFrame(wx.Frame):
         self.frame_sizer.Add(self.plateoperations,5,wx.ALIGN_BOTTOM|wx.EXPAND)
         self.SetSizer(self.frame_sizer)
         self.filemenu = wx.Menu()
-        rsf = self.filemenu.Append(-1,"Read session file")
+        rsf = self.filemenu.Append(-1,"&Read session file")
+        readcomponent = self.filemenu.Append(-1,"Read &Component  from csv")
+        savethesession = self.filemenu.Append(-1,"&Save session file")
         exit = self.filemenu.Append(-1,"E&xit")
+
         self.Bind(wx.EVT_MENU,self.read_session,rsf)
         self.Bind(wx.EVT_MENU,self.exit_gui,exit)
+        self.Bind(wx.EVT_MENU,self.component_panel.get_and_parse_file,readcomponent)
+        self.Bind(wx.EVT_MENU,self.save_session,savethesession)
         self.menubar = wx.MenuBar()
         self.menubar.Append(self.filemenu, "&File")
         self.SetMenuBar(self.menubar)
@@ -52,19 +57,20 @@ class MaFrame(wx.Frame):
 
     def exit_gui(self,event):
         # save timestamped session
+        print "Goycha"
         self.Close(1)
+
     def save_session(self,event):
         try :
             if self.dirtowriteto == None :
                 if os.environ.has_key("HOME"):
-                    adialog = wx.DirDialog(self,message="Directory for dispense files",defaultPath=os.environ["HOME"])
+                    adialog = wx.DirDialog(self,message="Directory for dispense and session files",defaultPath=os.environ["HOME"])
                     adialog.ShowModal()
-                    print "getting dialog"
                     self.dirtowriteto = adialog.GetPath()
                     print "ALL OUTPUT TO DIR %s" % self.dirtowriteto
                     self.session_file = open(os.path.join(self.dirtowriteto ,"%s.yaml" % str(self.holistic.file_name_text.GetValue())),"w")
                 else:
-                    adialog = wx.DirDialog(self,message="Directory for dispense files",defaultPath=os.path.join(os.environ["HOMEDRIVE"],os.environ["HOMEPATH"]))
+                    adialog = wx.DirDialog(self,message="Directory for dispense and session files",defaultPath=os.path.join(os.environ["HOMEDRIVE"],os.environ["HOMEPATH"]))
                     adialog.ShowModal()
                     print "getting dialog"
                     self.dirtowriteto = adialog.GetPath()
@@ -76,12 +82,17 @@ class MaFrame(wx.Frame):
         except KeyError , k :
             print "Not Linux/Mac/Windows I see"
             pass
-        self.FindWindowByName("platesetup").save_session(event,self.session_dict)
-        self.FindWindowByName("components").save_session(event,self.session_dict)
-        self.FindWindowByName("plateop").save_session(event,self.session_dict)
-        yaml.dump(self.session_dict,self.session_file)
-        self.session_file.close()
-        event.Skip()
+        try:
+
+            self.FindWindowByName("platesetup").save_session(event,self.session_dict)
+            self.FindWindowByName("components").save_session(event,self.session_dict)
+            self.FindWindowByName("plateop").save_session(event,self.session_dict)
+            yaml.dump(self.session_dict,self.session_file)
+            self.session_file.close()
+        except Exception , e :
+            print "Error while saving session file:" , e
+            wx.MessageBox("No Plates or Components or Operations Defined: Unable to write session File")
+    
 
     def read_session(self,event):
         evt_delete = wx.CommandEvent(wx.wxEVT_COMMAND_BUTTON_CLICKED,self.plate_panel.refresh_button.GetId())
@@ -280,7 +291,7 @@ class Validate_Plate_Coordinate(wx.PyValidator):
 class PlatePanel(wx.ScrolledWindow):
     num_subplates = 1
     
-    plate_customizer_dict = {96:{1:("A1","H12"),2:("A1","D12","E1","H12"),3:("A1","","","","","H12"),4:("A1","D6","A7","D12","E1","H6","E7","H12")},24:{1:("A1","D6"),2:("A1","B6","C1","D6")},384:{1:("A1","P24"),2:("A1","H24","I1","P24"),4:("A1","H12","A13","H24","I1","P12","I13","P24")}}
+    plate_customizer_dict = {96:{1:("A1","H12"),2:("A1","D12","E1","H12"),4:("A1","D6","A7","D12","E1","H6","E7","H12")},24:{1:("A1","D6"),2:("A1","B6","C1","D6")},384:{1:("A1","P24"),2:("A1","H24","I1","P24"),4:("A1","H12","A13","H24","I1","P12","I13","P24")}}
 #    change_logger = []
     style = 96
 
@@ -1408,5 +1419,5 @@ if __name__=="__main__":
     maframe.Layout()
     maframe.Show()
     # Debug using this tool
-    wx.lib.inspection.InspectionTool().Show()
+#    wx.lib.inspection.InspectionTool().Show()
     app.MainLoop()
