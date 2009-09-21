@@ -156,7 +156,7 @@ class MaFrame(wx.Frame):
                 self.component_panel.top_grid_sizer.Add(dummypanel1)
                 self.component_panel.top_grid_sizer.Add(dummypanel2)
                 self.component_panel.num_components = self.component_panel.num_components + 1
-            self.Fit()
+#            self.Fit()
             self.do_layout()
         buffers_dict = self.session_dict["buffers"]
         sorted_buffers_dict_keys = sorted(buffers_dict.keys())
@@ -180,7 +180,7 @@ class MaFrame(wx.Frame):
         self.component_panel.set_components(event)
         self.component_panel.bind_delete_events()
         self.component_panel.IS_CONFIGURED = self.session_dict["component_config_state"]
-        self.Fit()
+#        self.Fit()
         self.component_panel.top_grid_sizer.Layout()
         self.do_layout()
         operations_dict = self.session_dict["operations"]
