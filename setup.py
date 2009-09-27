@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 setup(
     name = "GridZilla",
-        version = "0.1beta",
+        version = "0.2beta",
 	    packages = find_packages(),
 	    scripts = ["gzilla.py"],
 	    author = "Hari Jayaram",
