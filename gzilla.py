@@ -1,18 +1,16 @@
-
-import os.path
 #!/usr/bin/python
 # To change this template, choose Tools | Templates
 # and open the template in the editor.
 
 
-
+import os.path
 import wx
 import wx.lib.scrolledpanel  as myscrolledpanel
 #import wx.lib.inspection
 MYFRAMESIZE = (1212,700)
 import sys
 import yaml
-
+import subprocess
 
 class MaFrame(wx.Frame):
     plateobjects = []
@@ -101,8 +99,7 @@ class MaFrame(wx.Frame):
             self.session_dict = yaml.load(open(str(wx.FileSelector("Session YAML File \"*.yaml\" format","","","yaml","*.yaml")), "r"))
         except IOError, i:
             wx.MessageBox("No Such File")
-            event.Skip()
-            return
+            return None
         # Get Plate dict
         plates_dict = self.session_dict["plates"]
         masterplate_style = self.session_dict["style"]
@@ -1305,23 +1302,21 @@ class PlateOperations(wx.ScrolledWindow):
                 added_water.append(myobj.plate)
             else:
                 pass
-#                print "filled water into" , added_water
-
-
-
-##        scrfile.write("water = component.Component(\"100.00 % Water\",100,100000)\n")
-#        scrfile.write("pwhole = plate.Plate(\"A1\",\"H12\",mp)\n")
-#        scrfile.write("pwhole.fill_water(water)\n")
+            #                print "filled water into" , added_water
+            #        scrfile.write("water = component.Component(\"100.00 % Water\",100,100000)\n")
+            #        scrfile.write("pwhole = plate.Plate(\"A1\",\"H12\",mp)\n")
+            #        scrfile.write("pwhole.fill_water(water)\n")
+            
         scrfile.write("mp.printwellinfo()\n")
         scrfile.write("mp.makefileforformulatrix(r\"%s\")\n" % str(os.path.join(self.GetParent().dirtowriteto,"%s.dl.txt" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
         scrfile.write("mp.writepdf(r\"%s\")\n" % str(os.path.join(self.GetParent().dirtowriteto,"%s" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
-
-
 #        scrfile.write("mp.printpdf(r\"%s\")\n" % str((os.path.join(self.GetParent().dirtowriteto,"%s_volumes" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))))
-
+        scrfile.write("mp.makefileforhamilton(r\"%s\",1)\n" % str(os.path.join(self.GetParent().dirtowriteto,"%s-hamilton.csv" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
         scrfile.close()
+        
         try:
-            execfile(os.path.join(self.GetParent().dirtowriteto,"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
+            os.chmod((os.path.join(self.GetParent().dirtowriteto,"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))),0755)
+            subprocess.call(os.path.join(self.GetParent().dirtowriteto,"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
             self.GetParent().GetStatusBar().SetStatusText("DISPENSE LIST %s OUTPUT  " % str(os.path.join(self.GetParent().dirtowriteto,"%s.dl.txt" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
             self.GetParent().GetStatusBar().SetStatusText("FILES OUTPUT with prefix %s" % str(os.path.join(self.GetParent().dirtowriteto,"%s" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
             self.GetParent().GetStatusBar().SetBackgroundColour(wx.Colour(204,255,204))
@@ -1332,7 +1327,7 @@ class PlateOperations(wx.ScrolledWindow):
 
         except Exception , e:
             self.GetParent().GetStatusBar().SetBackgroundColour(wx.Colour(255,204,153))
-            self.GetParent().GetStatusBar().SetStatusText(e.message)
+            self.GetParent().GetStatusBar().SetStatusText(str(e))
 
     def delete_all_operations(self,event):
         rows,cols = self.po_sizer.CalcRowsCols()
