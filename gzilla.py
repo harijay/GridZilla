@@ -11,6 +11,7 @@ MYFRAMESIZE = (1212,700)
 import sys
 import yaml
 import subprocess
+from subprocess import CalledProcessError
 
 class MaFrame(wx.Frame):
     plateobjects = []
@@ -224,13 +225,17 @@ class MaFrame(wx.Frame):
                 event_operation.SetString(operation_row_dict["op"])
                 event_operation.SetEventObject(new_dispense_combobox)
                 self.plateoperations.on_operation_combobox_select(event_operation,new_dispense_combobox)
-                print  self.plateoperations.plate_operations
+                print  "Plate Operations" , self.plateoperations.plate_operations
                 
                 # Create operation box regardless
                 # for components in component_dict create a set of comboboxes with component choices , set the component_dict value
                 # For arg dicts create textcontrols and set value to value in argdict array
+                if operation_row_dict["component_dict"] == {} :
+                    self.GetStatusBar().SetStatusText("Someething Wrong here: Check all operations in session file")
+                    operation_row_dict["component_dict"][0] = ""   
+                    
                 sorted_compoennt_keys = sorted(operation_row_dict["component_dict"].keys())
-
+                
                 for component_stored_keys in sorted_compoennt_keys:
                     cbox = self.plateoperations.po_sizer.GetItem(currentrowpos*currentcolpos +  2 + component_stored_keys ).GetWindow()
                     cbox.SetValue(operation_row_dict["component_dict"][ component_stored_keys])
@@ -870,28 +875,33 @@ class PromptingComboBox(wx.ComboBox) :
 
     def SetChoices(self,newchoices):
         self.choices = newchoices
-
+         
     def EvtChar(self, event):
         if event.GetKeyCode() == 8:
             self.ignoreEvtText = True
         event.Skip()
     
     def EvtText(self, event):
-        if self.ignoreEvtText:
-            self.ignoreEvtText = False
-            return
-        currentText = event.GetString().upper()
-        found = False
-        for choice in self.choices :
-            if choice.startswith(currentText):
-                self.ignoreEvtText = True
-                self.SetValue(choice)
-                self.SetInsertionPoint(len(currentText))
-                self.SetMark(len(currentText), len(choice))
-                found = True
-                break
-        if not found:
-            event.Skip()
+        event.Skip()
+        return
+        ## if self.ignoreEvtText:
+        ##     self.ignoreEvtText = False
+        ##     # Added to Fix PromptingCombobox bug
+        ##     event.Skip()
+        ## currentText = event.GetString().upper()
+        ## found = False
+        ## for choice in self.choices :
+        ##     if choice.startswith(currentText):
+        ##         self.ignoreEvtText = True
+        ##         self.SetValue(choice)
+        ##         self.SetInsertionPoint(len(currentText))
+        ##         self.SetMark(len(currentText), len(choice))
+        ##         found = True
+        ##         # Added to fix PromptingCombobox bug
+        ##         # http://trac.wxwidgets.org/ticket/11122
+        ##         event.Skip()
+        ## if not found:
+        ##     event.Skip()
 
 class PlateOperations(wx.ScrolledWindow):
     #dict structure is an operations followed by a dict of arguments
@@ -1024,6 +1034,7 @@ class PlateOperations(wx.ScrolledWindow):
 
             if arg  == "Component":
                 newcombo1 = PromptingComboBox(self,"",choices=self.component_frame_choices,rowposition=operationcombobox.rowposition)
+                print "gettingsadadfadasd"
                 self.Bind(wx.EVT_COMBOBOX,lambda event, caller=newcombo1,row=operationcombobox.rowposition,column=argcount :self.on_component_comobobox_select(event,caller,row,column),newcombo1 )
                 if self.po_sizer.GetItem(int(operationcombobox.rowposition)*10  + 2 + argcount ):
                     oldwindow = self.po_sizer.GetItem(int(operationcombobox.rowposition)*int(10) + int(2) + argcount).GetWindow()
@@ -1069,6 +1080,7 @@ class PlateOperations(wx.ScrolledWindow):
         myobj.argdict[event.GetId()]= caller.GetValue()
 
     def on_component_comobobox_select(self,event,caller,row,column):
+		# This event is not bound properly. Does not get called everytime
         print "aefrgaergfertqert",event.GetString(),caller,row
         myobj = self.plate_operations[row]
         myobj.component_dict[column] = event.GetString()
@@ -1238,85 +1250,98 @@ class PlateOperations(wx.ScrolledWindow):
         except KeyError , k :
             print "Not Linux/Mac/Windows I see"
             pass
+        try:
+            scrfile.write("#!/usr/bin/python\n")
+            scrfile.write("from gridder import masterplate,plate,component,buffercomponent\n")
+            scrfile.write("mp = masterplate.Masterplate(%s,%d)\n" % (self.GetParent().FindWindowByName("mpanel").volttc.GetValue(),self.GetParent().FindWindowByName("platesetup").style))
 
-        scrfile.write("#!/usr/bin/python\n")
-        scrfile.write("from gridder import masterplate,plate,component,buffercomponent\n")
-        scrfile.write("mp = masterplate.Masterplate(%s,%d)\n" % (self.GetParent().FindWindowByName("mpanel").volttc.GetValue(),self.GetParent().FindWindowByName("platesetup").style))
+            myplate_setup = self.GetParent().FindWindowByName("platesetup").plate_setup_dict
+            for key in myplate_setup.keys():
+                    com =  "p%s = plate.Plate(\"%s\",\"%s\",mp)\n" % ( key,myplate_setup[key][0],myplate_setup[key][1])
+                    print com
+                    scrfile.write(com)
 
-        myplate_setup = self.GetParent().FindWindowByName("platesetup").plate_setup_dict
-        for key in myplate_setup.keys():
-                com =  "p%s = plate.Plate(\"%s\",\"%s\",mp)\n" % ( key,myplate_setup[key][0],myplate_setup[key][1])
+            comppanel = self.GetParent().FindWindowByName("components").all_solutionsdict
+            objdict = {}
+
+            for key in sorted(comppanel.keys()):
+                if key in self.GetParent().FindWindowByName("components").buffer_namedict.keys():
+                    cargs = ""
+                    cargs = ",".join(comppanel[key][1:])
+                    com = "c%s = buffercomponent.SimpleBuffer(\"%s\" , %s)\n" % (key,comppanel[key][0],cargs)
+                    print com
+                    scrfile.write(com)
+                    objdict[comppanel[key][0]] = "c%s " %  key
+                else:
+                    cargs = ""
+                    cargs = ",".join(comppanel[key][1:])
+                    com = "c%s = component.Component(\"%s\" , %s)\n" % (key,comppanel[key][0],cargs)
+                    print com
+                    scrfile.write(com)
+                    objdict[comppanel[key][0]] = "c%s " %  key
+
+            print self.plate_operations.keys()
+
+            for i in self.plate_operations.keys():
+
+                myobj = self.plate_operations[i]
+                print myobj.argdict
+                argstring = "" 
+                args = ""
+                textentries = sorted(myobj.argdict.keys())
+                # Since event keys are negative numbers , to preserve argument order for functions we reverse the keys
+                textentries.reverse()
+                for sorted_key in textentries:
+                    argstring = argstring + myobj.argdict[sorted_key] + " "
+                args = ",".join(argstring.split())
+                component_keys = sorted(myobj.component_dict.keys())
+                cstring = ""
+                for sorted_component in component_keys:
+                    cstring = cstring +  objdict[myobj.component_dict[sorted_component]] + " "
+                component_args = ",".join(cstring.split())
+                print myobj.plate
+                com = "p%s.%s(%s,%s)\n" % (myobj.plate.split()[1],self.function_dict[myobj.op],component_args,args)
                 print com
                 scrfile.write(com)
 
-        comppanel = self.GetParent().FindWindowByName("components").all_solutionsdict
-        objdict = {}
+            # Add the water Component to each script
+            scrfile.write("water = component.Component(\"100.00 % Water\",100,100000)\n")
+            added_water = []
+            for i in self.plate_operations.keys():
+                myobj = self.plate_operations[i]
+                if myobj.plate not in added_water:
+                    scrfile.write("p%s.fill_water(water)\n" % myobj.plate.split()[1])
+                    added_water.append(myobj.plate)
+                else:
+                    pass
+                #                print "filled water into" , added_water
+                #        scrfile.write("water = component.Component(\"100.00 % Water\",100,100000)\n")
+                #        scrfile.write("pwhole = plate.Plate(\"A1\",\"H12\",mp)\n")
+                #        scrfile.write("pwhole.fill_water(water)\n")
 
-        for key in sorted(comppanel.keys()):
-            if key in self.GetParent().FindWindowByName("components").buffer_namedict.keys():
-                cargs = ""
-                cargs = ",".join(comppanel[key][1:])
-                com = "c%s = buffercomponent.SimpleBuffer(\"%s\" , %s)\n" % (key,comppanel[key][0],cargs)
-                print com
-                scrfile.write(com)
-                objdict[comppanel[key][0]] = "c%s " %  key
-            else:
-                cargs = ""
-                cargs = ",".join(comppanel[key][1:])
-                com = "c%s = component.Component(\"%s\" , %s)\n" % (key,comppanel[key][0],cargs)
-                print com
-                scrfile.write(com)
-                objdict[comppanel[key][0]] = "c%s " %  key
-
-        print self.plate_operations.keys()
-        
-        for i in self.plate_operations.keys():
-
-            myobj = self.plate_operations[i]
-            print myobj.argdict
-            argstring = "" 
-            args = ""
-            textentries = sorted(myobj.argdict.keys())
-            # Since event keys are negative numbers , to preserve argument order for functions we reverse the keys
-            textentries.reverse()
-            for sorted_key in textentries:
-                argstring = argstring + myobj.argdict[sorted_key] + " "
-            args = ",".join(argstring.split())
-            component_keys = sorted(myobj.component_dict.keys())
-            cstring = ""
-            for sorted_component in component_keys:
-                cstring = cstring +  objdict[myobj.component_dict[sorted_component]] + " "
-            component_args = ",".join(cstring.split())
-            print myobj.plate
-            com = "p%s.%s(%s,%s)\n" % (myobj.plate.split()[1],self.function_dict[myobj.op],component_args,args)
-            print com
-            scrfile.write(com)
-
-        # Add the water Component to each script
-        scrfile.write("water = component.Component(\"100.00 % Water\",100,100000)\n")
-        added_water = []
-        for i in self.plate_operations.keys():
-            myobj = self.plate_operations[i]
-            if myobj.plate not in added_water:
-                scrfile.write("p%s.fill_water(water)\n" % myobj.plate.split()[1])
-                added_water.append(myobj.plate)
-            else:
-                pass
-            #                print "filled water into" , added_water
-            #        scrfile.write("water = component.Component(\"100.00 % Water\",100,100000)\n")
-            #        scrfile.write("pwhole = plate.Plate(\"A1\",\"H12\",mp)\n")
-            #        scrfile.write("pwhole.fill_water(water)\n")
+            scrfile.write("mp.printwellinfo()\n")
+            scrfile.write("mp.makefileforformulatrix(r\"%s\")\n" % str(os.path.join(self.GetParent().dirtowriteto,"%s.dl.txt" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
+            scrfile.write("mp.writepdf(r\"%s\")\n" % str(os.path.join(self.GetParent().dirtowriteto,"%s" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
+    #        scrfile.write("mp.printpdf(r\"%s\")\n" % str((os.path.join(self.GetParent().dirtowriteto,"%s_volumes" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))))
+            scrfile.write("mp.makefileforhamilton(r\"%s\",1)\n" % str(os.path.join(self.GetParent().dirtowriteto,"%s-hamilton.csv" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
+            scrfile.close()
+        except Exception as ec:
+            self.GetParent().GetStatusBar().SetBackgroundColour(wx.Colour(255,204,153))
+            self.GetParent().GetStatusBar().SetStatusText("Something wrong in session file : Check all components and operations " + str(type(ec)))
+            return
             
-        scrfile.write("mp.printwellinfo()\n")
-        scrfile.write("mp.makefileforformulatrix(r\"%s\")\n" % str(os.path.join(self.GetParent().dirtowriteto,"%s.dl.txt" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
-        scrfile.write("mp.writepdf(r\"%s\")\n" % str(os.path.join(self.GetParent().dirtowriteto,"%s" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
-#        scrfile.write("mp.printpdf(r\"%s\")\n" % str((os.path.join(self.GetParent().dirtowriteto,"%s_volumes" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))))
-        scrfile.write("mp.makefileforhamilton(r\"%s\",1)\n" % str(os.path.join(self.GetParent().dirtowriteto,"%s-hamilton.csv" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
-        scrfile.close()
-        
         try:
             os.chmod((os.path.join(self.GetParent().dirtowriteto,"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))),0755)
-            subprocess.call(os.path.join(self.GetParent().dirtowriteto,"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
+            
+            subp_status = subprocess.Popen(["python",os.path.join(self.GetParent().dirtowriteto,"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))],shell=False,stderr=subprocess.PIPE,stdout=subprocess.PIPE)
+            mystdout,mystderr = subp_status.communicate()
+            if subp_status.returncode != 0 :
+                self.GetParent().GetStatusBar().SetBackgroundColour(wx.Colour(255,204,153))
+                self.GetParent().GetStatusBar().SetStatusText("\n".join(mystderr.splitlines()[-1:]))
+                return
+            
+            
+                
             self.GetParent().GetStatusBar().SetStatusText("DISPENSE LIST %s OUTPUT  " % str(os.path.join(self.GetParent().dirtowriteto,"%s.dl.txt" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
             self.GetParent().GetStatusBar().SetStatusText("FILES OUTPUT with prefix %s" % str(os.path.join(self.GetParent().dirtowriteto,"%s" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
             self.GetParent().GetStatusBar().SetBackgroundColour(wx.Colour(204,255,204))
