@@ -1236,16 +1236,16 @@ class PlateOperations(wx.ScrolledWindow):
                     print "getting dialog"
                     self.GetParent().dirtowriteto = adialog.GetPath()
                     print "ALL OUTPUT TO DIR %s" % self.GetParent().dirtowriteto
-                    scrfile = open(os.path.join(self.GetParent().dirtowriteto ,"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())),"w")
+                    scrfile = open(os.path.join(self.GetParent().dirtowriteto ,"%s_scr.py" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())),"w")
                 else:
                     adialog = wx.DirDialog(self,message="Directory for dispense files",defaultPath=os.path.join(os.environ["HOMEDRIVE"],os.environ["HOMEPATH"]))
                     adialog.ShowModal()
                     print "getting dialog"
                     self.GetParent().dirtowriteto = adialog.GetPath()
                     print "ALL OUTPUT TO DIR %s" % self.GetParent().dirtowriteto
-                    scrfile = open(os.path.join(self.GetParent().dirtowriteto ,"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())),"w")
+                    scrfile = open(os.path.join(self.GetParent().dirtowriteto ,"%s_scr.py" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())),"w")
             else :
-                scrfile = open(os.path.join(self.GetParent().dirtowriteto ,"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())),"w")
+                scrfile = open(os.path.join(self.GetParent().dirtowriteto ,"%s_scr.py" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())),"w")
             
         except KeyError , k :
             print "Not Linux/Mac/Windows I see"
@@ -1331,9 +1331,9 @@ class PlateOperations(wx.ScrolledWindow):
             return
             
         try:
-            os.chmod((os.path.join(self.GetParent().dirtowriteto,"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))),0755)
+            os.chmod((os.path.join(self.GetParent().dirtowriteto,"%s_scr.py" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))),0755)
             
-            subp_status = subprocess.Popen(["python",os.path.join(self.GetParent().dirtowriteto,"%s.scr" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))],shell=False,stderr=subprocess.PIPE,stdout=subprocess.PIPE)
+            subp_status = subprocess.Popen(["python",os.path.join(self.GetParent().dirtowriteto,"%s_scr.py" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))],shell=False,stderr=subprocess.PIPE,stdout=subprocess.PIPE)
             mystdout,mystderr = subp_status.communicate()
             if subp_status.returncode != 0 :
                 self.GetParent().GetStatusBar().SetBackgroundColour(wx.Colour(255,204,153))
