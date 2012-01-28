@@ -1,4 +1,6 @@
 from setuptools import setup, find_packages
+from distutils.core import setup
+import py2exe
 setup(
     name = "GridZilla",
         version = "0.2beta",

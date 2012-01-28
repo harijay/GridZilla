@@ -18,7 +18,6 @@ SetupIconFile=gzilla_ico_dark.ico
 [Files]
 Source: .\dist\gzilla.exe; DestDir: {app}\bin
 Source: .\dist\*.pyd; DestDir: {app}\bin
-Source: *.dll; DestDir: {app}\bin
 Source: .\dist\*.dll; DestDir: {app}\bin
 Source: .\dist\library.zip; DestDir: {app}\bin
 Source: gzilla_ico_dark.ico; DestDir: {app}\icons

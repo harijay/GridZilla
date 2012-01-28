@@ -11,7 +11,31 @@ MYFRAMESIZE = (1212,700)
 import sys
 import yaml
 import subprocess
+import gridder
+from gridder import *
 from subprocess import CalledProcessError
+# Imports to get py2exe and PyInstaller to work right
+from reportlab.pdfbase import _fontdata_enc_winansi
+from reportlab.pdfbase import _fontdata_enc_macroman
+from reportlab.pdfbase import _fontdata_enc_standard
+from reportlab.pdfbase import _fontdata_enc_symbol
+from reportlab.pdfbase import _fontdata_enc_zapfdingbats
+from reportlab.pdfbase import _fontdata_enc_pdfdoc
+from reportlab.pdfbase import _fontdata_enc_macexpert
+from reportlab.pdfbase import _fontdata_widths_courier
+from reportlab.pdfbase import _fontdata_widths_courierbold
+from reportlab.pdfbase import _fontdata_widths_courieroblique
+from reportlab.pdfbase import _fontdata_widths_courierboldoblique
+from reportlab.pdfbase import _fontdata_widths_helvetica
+from reportlab.pdfbase import _fontdata_widths_helveticabold
+from reportlab.pdfbase import _fontdata_widths_helveticaoblique
+from reportlab.pdfbase import _fontdata_widths_helveticaboldoblique
+from reportlab.pdfbase import _fontdata_widths_timesroman
+from reportlab.pdfbase import _fontdata_widths_timesbold
+from reportlab.pdfbase import _fontdata_widths_timesitalic
+from reportlab.pdfbase import _fontdata_widths_timesbolditalic
+from reportlab.pdfbase import _fontdata_widths_symbol
+from reportlab.pdfbase import _fontdata_widths_zapfdingbats
 
 class MaFrame(wx.Frame):
     plateobjects = []
@@ -1080,7 +1104,7 @@ class PlateOperations(wx.ScrolledWindow):
         myobj.argdict[event.GetId()]= caller.GetValue()
 
     def on_component_comobobox_select(self,event,caller,row,column):
-		# This event is not bound properly. Does not get called everytime
+        # This event is not bound properly. Does not get called everytime
         print "aefrgaergfertqert",event.GetString(),caller,row
         myobj = self.plate_operations[row]
         myobj.component_dict[column] = event.GetString()
@@ -1337,6 +1361,7 @@ class PlateOperations(wx.ScrolledWindow):
             mystdout,mystderr = subp_status.communicate()
             if subp_status.returncode != 0 :
                 self.GetParent().GetStatusBar().SetBackgroundColour(wx.Colour(255,204,153))
+                print mystderr
                 self.GetParent().GetStatusBar().SetStatusText("\n".join(mystderr.splitlines()[-1:]))
                 return
             
