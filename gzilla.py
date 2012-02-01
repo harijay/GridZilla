@@ -2,7 +2,7 @@
 # To change this template, choose Tools | Templates
 # and open the template in the editor.
 
-
+import gridder
 import os.path
 import wx
 import wx.lib.scrolledpanel  as myscrolledpanel
@@ -11,7 +11,6 @@ MYFRAMESIZE = (1212,700)
 import sys
 import yaml
 import subprocess
-import gridder
 from gridder import *
 from subprocess import CalledProcessError
 # Imports to get py2exe and PyInstaller to work right
@@ -56,6 +55,7 @@ class MaFrame(wx.Frame):
         self.component_panel = ComponentPanel(parent=self,name="components")
         self.plateoperations = PlateOperations(parent=self,name="plateop")
         self.frame_sizer.Add(self.component_panel,5,wx.ALIGN_BOTTOM|wx.EXPAND)
+        # The Operations panel
         self.holistic = MpPanel(self,name="mpanel")
         self.frame_sizer.Add(self.holistic,5,wx.EXPAND)
         self.frame_sizer.Add(self.plateoperations,5,wx.ALIGN_BOTTOM|wx.EXPAND)
@@ -80,9 +80,9 @@ class MaFrame(wx.Frame):
 
     def exit_gui(self,event):
         # save timestamped session
-        print "Goycha"
+        #print "Goycha"
         self.Close(1)
-
+    # Event filed to save the session to file
     def save_session(self,event):
         try :
             if self.dirtowriteto == None :
@@ -90,29 +90,42 @@ class MaFrame(wx.Frame):
                     adialog = wx.DirDialog(self,message="Directory for dispense and session files",defaultPath=os.environ["HOME"])
                     adialog.ShowModal()
                     self.dirtowriteto = adialog.GetPath()
-                    print "ALL OUTPUT TO DIR %s" % self.dirtowriteto
+                    #print "ALL OUTPUT TO DIR %s" % self.dirtowriteto
+                    session_file_name = os.path.join(self.dirtowriteto ,"%s.yaml" % str(self.holistic.file_name_text.GetValue()))
+                    if os.path.exists(session_file_name):
+                        wx.MessageBox("Overwriting session file %s" % session_file_name)
                     self.session_file = open(os.path.join(self.dirtowriteto ,"%s.yaml" % str(self.holistic.file_name_text.GetValue())),"w")
                 else:
                     adialog = wx.DirDialog(self,message="Directory for dispense and session files",defaultPath=os.path.join(os.environ["HOMEDRIVE"],os.environ["HOMEPATH"]))
                     adialog.ShowModal()
-                    print "getting dialog"
+                    #print "getting dialog"
                     self.dirtowriteto = adialog.GetPath()
-                    print "ALL OUTPUT TO DIR %s" % self.dirtowriteto
+                    session_file_name = os.path.join(self.dirtowriteto ,"%s.yaml" % str(self.holistic.file_name_text.GetValue()))
+                    if os.path.exists(session_file_name):
+                        wx.MessageBox("Overwriting session file %s" % session_file_name)
+                    #print "ALL OUTPUT TO DIR %s" % self.dirtowriteto
                     self.session_file = open(os.path.join(self.dirtowriteto ,"%s.yaml" % str(self.holistic.file_name_text.GetValue())),"w")
             else :
+                session_file_name = os.path.join(self.dirtowriteto ,"%s.yaml" % str(self.holistic.file_name_text.GetValue()))
+                if os.path.exists(session_file_name) > 0:
+                    wx.MessageBox("Overwriting session file %s" % session_file_name)
                 self.session_file = open(os.path.join(self.dirtowriteto ,"%s.yaml" % str(self.holistic.file_name_text.GetValue())),"w")
             
         except KeyError , k :
             print "Not Linux/Mac/Windows I see"
-            pass
-        try:
 
+        try:
+            # TODO Track down which these operations are
+            # Class PlatePanel
             self.FindWindowByName("platesetup").save_session(event,self.session_dict)
+            # Class ComponentPanel
             self.FindWindowByName("components").save_session(event,self.session_dict)
+            # Class PlateOperations
             self.FindWindowByName("plateop").save_session(event,self.session_dict)
             yaml.dump(self.session_dict,self.session_file)
             self.session_file.close()
         except Exception , e :
+            sys.stderr.write(e.message)
             print "Error while saving session file:" , e
             wx.MessageBox("No Plates or Components or Operations Defined: Unable to write session File")
     
@@ -133,25 +146,26 @@ class MaFrame(wx.Frame):
         if plates_dict is not None:
             sorted_plates = sorted(plates_dict.keys())
             for key in sorted_plates:
-                self.GetStatusBar().SetStatusText("Adding Plate %s" % key.split()[1])
+                #self.GetStatusBar().SetStatusText("Adding Plate %s" % key.split()[1])
                 platelabel = wx.StaticText(self.plate_panel,id=-1,label=key, size=(-1,-1),style=wx.ALIGN_CENTER )
                 text_ctrl_1 = wx.TextCtrl(self.plate_panel, -1,plates_dict[key][0],(50,-1))
                 text_ctrl_2 = wx.TextCtrl(self.plate_panel,-1,plates_dict[key][1],(50,-1))
                 self.plate_panel.master_sizer.Add(platelabel,1,wx.ALIGN_CENTER)
                 self.plate_panel.master_sizer.Add(text_ctrl_1,1,wx.ALIGN_CENTER)
                 self.plate_panel.master_sizer.Add(text_ctrl_2,1,wx.ALIGN_CENTER)
-                self.plate_panel.master_sizer.Layout()
+                #self.plate_panel.master_sizer.Layout()
                 #self.sizer_top.Add(self.plate_add_button,1,wx.RIGHT|wx.ALIGN_BOTTOM,10)
                 self.plate_panel.bind_delete_events()
                 self.plate_panel.master_sizer.Layout()
     #            self.plate_panel.master_sizer.Fit(self)
                 self.plate_panel.num_subplates = self.plate_panel.num_subplates + 1
-                self.do_layout()
+                #self.do_layout()
                 #self.GetParent().Fit()
                 event = wx.CommandEvent(wx.wxEVT_COMMAND_BUTTON_CLICKED,self.plate_panel.plate_display_button.GetId())
                 event.SetEventObject(self.plate_panel.plate_display_button)
                 self.plate_panel.set_plate_config(event)
                 event.Skip()
+            self.do_layout()
         self.PLATE_CONFIGURED = self.session_dict["plate_config_state"]
         components_dict = self.session_dict["components"]
         sorted_components_dict_keys = sorted(components_dict.keys())
@@ -162,7 +176,7 @@ class MaFrame(wx.Frame):
 
         if sorted_components_dict_keys is not None:
             for key in sorted_components_dict_keys:
-                print key
+                #print key
                 componentlabel = wx.StaticText(parent=self.component_panel,id=-1,label=key ,style=wx.ALIGN_CENTER)
                 text_ctrl_1 = wx.TextCtrl(self.component_panel, -1, components_dict[key][0],(-1,-1))
                 text_ctrl_2 = wx.TextCtrl(self.component_panel,-1,components_dict[key][1],(-1,-1))
@@ -249,7 +263,7 @@ class MaFrame(wx.Frame):
                 event_operation.SetString(operation_row_dict["op"])
                 event_operation.SetEventObject(new_dispense_combobox)
                 self.plateoperations.on_operation_combobox_select(event_operation,new_dispense_combobox)
-                print  "Plate Operations" , self.plateoperations.plate_operations
+                #print  "Plate Operations" , self.plateoperations.plate_operations
                 
                 # Create operation box regardless
                 # for components in component_dict create a set of comboboxes with component choices , set the component_dict value
@@ -273,9 +287,10 @@ class MaFrame(wx.Frame):
                 numcompoboxes = len( sorted_compoennt_keys)
             
                 for key in sorted_arg_keys:
-                    print "Value",self.plateoperations.po_sizer.GetItem(currentrowpos*currentcolpos +  2 + numcompoboxes + i ).GetWindow().GetValue()
-                    self.plateoperations.po_sizer.GetItem(currentrowpos*currentcolpos +  2 + numcompoboxes + i ).GetWindow().SetValue(operation_row_dict["argdict"][key])
-                    print "Value",self.plateoperations.po_sizer.GetItem(currentrowpos*currentcolpos +  2 + numcompoboxes + i ).GetWindow().GetValue()
+                    #print "Value",self.plateoperations.po_sizer.GetItem(currentrowpos*currentcolpos +  2 + numcompoboxes + i ).GetWindow().GetValue()
+                    self.plateoperations.po_sizer.GetItem(currentrowpos*currentcolpos +  2 + numcompoboxes + i ).GetWindow().SetValue(r"%s" % operation_row_dict["argdict"][key])
+                    #print r"Setting value to %s " % operation_row_dict["argdict"][key]
+                    #print "Value",self.plateoperations.po_sizer.GetItem(currentrowpos*currentcolpos +  2 + numcompoboxes + i ).GetWindow().GetValue()
                     i = i + 1
 
 class Validate_Plate_Coordinate(wx.PyValidator):
@@ -355,7 +370,7 @@ class PlatePanel(wx.ScrolledWindow):
 
     def on_style_change(self,event):
         self.style = int(self.styles[self.platestyle.GetSelection()])
-        print "style changed to %s" % self.style
+        #print "style changed to %s" % self.style
         if self.GetParent().PLATE_CONFIGURED:
             self.GetParent().PLATE_CONFIGURED = False
         
@@ -371,7 +386,7 @@ class PlatePanel(wx.ScrolledWindow):
         
     
     def delete_all_plates(self,event):
-        print "Destroying all children"
+        #print "Destroying all children"
         self.DestroyChildren()
         self.GetParent().plateobjects = []
         self.do_new_layout()
@@ -394,7 +409,7 @@ class PlatePanel(wx.ScrolledWindow):
     def on_mousewheel(self,event):
         self.Refresh()
         self.SetFocusIgnoringChildren()
-        print "refreshed"
+        #print "refreshed"
         event.Skip()
 
     def add_plate_def(self,event):
@@ -568,8 +583,8 @@ class PlatePanel(wx.ScrolledWindow):
             
         session_dict["plates"] = tmp_dict
         session_dict["style"] = self.style
-        print  yaml.dump(self.plate_setup_dict)
-        print self.plate_setup_dict
+        #print  yaml.dump(self.plate_setup_dict)
+        #print self.plate_setup_dict
     
 #
 #            platelabel = wx.StaticText(parent=self,id=-1,label="Plate %s" % self.num_subplates , size=(-1,-1),style=wx.ALIGN_CENTER )
@@ -670,7 +685,7 @@ class  ComponentPanel(wx.ScrolledWindow):
                 # Get row number of firing event
         delpos = self.top_grid_sizer.GetItem(caller).GetPosition()
         index = self.get_index(delpos)
-        print index
+        #print index
         widget_bin = []
         rows,cols = self.top_grid_sizer.CalcRowsCols()
 
@@ -678,7 +693,7 @@ class  ComponentPanel(wx.ScrolledWindow):
             w = self.top_grid_sizer.GetItem(i).GetWindow()
             widget_bin.append(w)
         
-        print len(widget_bin)
+        #print len(widget_bin)
         for item in widget_bin:
             item.Destroy()
 
@@ -693,7 +708,7 @@ class  ComponentPanel(wx.ScrolledWindow):
         self.GetParent().Layout()
         
         if self.IS_CONFIGURED:
-            print self.all_solutionsdict.pop(index/6)
+            #print self.all_solutionsdict.pop(index/6)
             if self.buffer_namedict.has_key(index/6):
                 self.buffer_namedict.pop(index/6)
             self.set_components(event)
@@ -778,10 +793,10 @@ class  ComponentPanel(wx.ScrolledWindow):
             event.Skip()
 
     def delete_all_components(self,event):
-        print "Destroying all components"
+#        print "Destroying all components"
         self.DestroyChildren()
         rows,cols = self.top_grid_sizer.CalcRowsCols()
-        print "ROWOOOW",rows,cols
+#        print "ROWOOOW",rows,cols
         self.fileselector_button = wx.Button(parent=self,id=-1,label="Component File")
         self.add_component_button = wx.Button(parent=self,id=-1,label="Add Component")
         self.add_buffer_button = wx.Button(parent=self,id=-1,label="Add Buffer")
@@ -841,7 +856,7 @@ class  ComponentPanel(wx.ScrolledWindow):
                         win.Bind(wx.EVT_TEXT,self.display_change_warning)
 
                     # component_namedict is keyed by component number(int) and has index 0 : Name, index 1: Conc, index 2: Volume
-                    print "Added component num :  %d , Name : %s , Concentration : %s Volume : %s " % tuple([rownum] + itemvals)
+#                    print "Added component num :  %d , Name : %s , Concentration : %s Volume : %s " % tuple([rownum] + itemvals)
 
                     self.component_namedict[rownum] = itemvals
                     self.all_solutionsdict[rownum] = itemvals
@@ -867,7 +882,7 @@ class  ComponentPanel(wx.ScrolledWindow):
         self.IS_CONFIGURED = True
         
     def save_session(self,event,session_dict):
-        print self.component_namedict.keys()
+        #print self.component_namedict.keys()
         tmp_comp_dict = {}
         tmp_buffer_dict = {}
         for key in self.component_namedict.keys():
@@ -878,8 +893,8 @@ class  ComponentPanel(wx.ScrolledWindow):
         for key in self.buffer_namedict.keys():
             tmp_buffer_dict["Buffer %s" % str(key)] = self.buffer_namedict[key]
         session_dict["buffers"] = tmp_buffer_dict
-        print yaml.dump(self.component_namedict)
-        print yaml.dump(self.buffer_namedict)
+        #print yaml.dump(self.component_namedict)
+        #print yaml.dump(self.buffer_namedict)
         event.Skip()
 
 
@@ -1014,7 +1029,9 @@ class PlateOperations(wx.ScrolledWindow):
                         else:
                             w.SetValue("")
                 except Exception , e:
-                    print "Nothing to Refresh"
+                    pass
+                    #print "Nothing to Refresh"
+
            
 
     def on_plate_combobox_select(self,event,platecallercombobox):
@@ -1034,9 +1051,9 @@ class PlateOperations(wx.ScrolledWindow):
 
 #        print "selected Operation combobox event %s %s from rid row %d " % (event.GetString(),event.GetId(),operationcombobox.rowposition)
         rows,cols = self.po_sizer.CalcRowsCols()
-        print "#######################"
-        for i in range(rows*cols):
-            print self.po_sizer.GetItem(i).GetWindow()
+#        print "#######################"
+#        for i in range(rows*cols):
+#            print self.po_sizer.GetItem(i).GetWindow()
         for counter in range(operationcombobox.rowposition*cols + 2,operationcombobox.rowposition*cols + cols,1):
             oldwindow = self.po_sizer.GetItem(counter).GetWindow()
             dummypanel = wx.Panel(self,-1,size=(140,-1))
@@ -1058,7 +1075,7 @@ class PlateOperations(wx.ScrolledWindow):
 
             if arg  == "Component":
                 newcombo1 = PromptingComboBox(self,"",choices=self.component_frame_choices,rowposition=operationcombobox.rowposition)
-                print "gettingsadadfadasd"
+               # print "gettingsadadfadasd"
                 self.Bind(wx.EVT_COMBOBOX,lambda event, caller=newcombo1,row=operationcombobox.rowposition,column=argcount :self.on_component_comobobox_select(event,caller,row,column),newcombo1 )
                 if self.po_sizer.GetItem(int(operationcombobox.rowposition)*10  + 2 + argcount ):
                     oldwindow = self.po_sizer.GetItem(int(operationcombobox.rowposition)*int(10) + int(2) + argcount).GetWindow()
@@ -1072,11 +1089,11 @@ class PlateOperations(wx.ScrolledWindow):
                     self.po_sizer.Layout()
 
             elif arg == "Buffer":
-                print self.buffer_frame_choices
+#                print self.buffer_frame_choices
                 newcombo2 = PromptingComboBox(self,"",choices=self.buffer_frame_choices,rowposition=operationcombobox.rowposition)
                 self.Bind(wx.EVT_COMBOBOX,lambda event, caller=newcombo2,row=operationcombobox.rowposition,column=argcount :self.on_component_comobobox_select(event,caller,row,column),newcombo2 )
                 if self.po_sizer.GetItem(int(operationcombobox.rowposition)*10  + 2 + argcount ):
-                    print "replace called on posn %d column %d " % (int(operationcombobox.rowposition)*int(10) + int(2) + argcount,argcount )
+                    #print "replace called on posn %d column %d " % (int(operationcombobox.rowposition)*int(10) + int(2) + argcount,argcount )
                     oldwindow = self.po_sizer.GetItem(int(operationcombobox.rowposition)*int(10) + int(2) + argcount).GetWindow()
                     self.po_sizer.Replace(oldwindow , newcombo2)
                     oldwindow.Destroy()
@@ -1084,7 +1101,7 @@ class PlateOperations(wx.ScrolledWindow):
 
 
                 else:
-                    print " Fresh item insertion attempt"
+                    #print " Fresh item insertion attempt"
                     self.po_sizer.Replace(int(operationcombobox.rowposition)*10 + int(2) + argcount, newcombo)
                     self.po_sizer.Layout()
 
@@ -1105,7 +1122,7 @@ class PlateOperations(wx.ScrolledWindow):
 
     def on_component_comobobox_select(self,event,caller,row,column):
         # This event is not bound properly. Does not get called everytime
-        print "aefrgaergfertqert",event.GetString(),caller,row
+#        print "aefrgaergfertqert",event.GetString(),caller,row
         myobj = self.plate_operations[row]
         myobj.component_dict[column] = event.GetString()
         event.Skip()
@@ -1116,7 +1133,7 @@ class PlateOperations(wx.ScrolledWindow):
                 mynewchoice = self.platelist
                 # Hardcode row position into object for script generation purposes
                 currentrowpos,currentcolpos  = self.po_sizer.CalcRowsCols()
-                print "MBCJMDBCJDCB" ,  currentrowpos,currentcolpos
+#                print "MBCJMDBCJDCB" ,  currentrowpos,currentcolpos
                 new_platechoice_combobox = PromptingComboBox(self,"",choices=mynewchoice, style=wx.CB_SORT,rowposition=currentrowpos)
                 # Need to lambda the combobox so we can know which row the event came from
                 new_platechoice_combobox.Bind(wx.EVT_COMBOBOX,lambda event,platecallercombobox=new_platechoice_combobox : self.on_plate_combobox_select(event,platecallercombobox))
@@ -1137,7 +1154,7 @@ class PlateOperations(wx.ScrolledWindow):
                     self.po_sizer.Add(dummypanel,1,wx.EXPAND|wx.ALIGN_CENTER)
                 self.do_init_layout()
                 self.GetParent().Layout()
-                print self.plate_combobox_objects
+#                print self.plate_combobox_objects
                 for item in self.plate_combobox_objects:
                     self.plate_id_mapper_dict[item.GetId()] = item.rowposition
             else:
@@ -1151,8 +1168,8 @@ class PlateOperations(wx.ScrolledWindow):
         for i in range(platecallercombobox.rowposition*cols,platecallercombobox.rowposition*cols + cols,1):
             widget = self.po_sizer.GetItem(i).GetWindow()
             dustbin.append(widget)
-            print self.plate_id_mapper_dict
-            print self.plate_operations
+#            print self.plate_id_mapper_dict
+#            print self.plate_operations
             if self.plate_operations.has_key(platecallercombobox.rowposition):
                 self.plate_operations.pop(platecallercombobox.rowposition)
             if widget in self.plate_combobox_objects:
@@ -1160,13 +1177,13 @@ class PlateOperations(wx.ScrolledWindow):
                 self.plate_id_mapper_dict.pop(widget.GetId())
             if widget in self.dispense_choice_boxlist:
                 self.dispense_choice_boxlist.remove(widget)
-        print dustbin,len(dustbin)
+        #print dustbin,len(dustbin)
         for w in dustbin:
             dummypanel = wx.Panel(self,-1,(1,1))
             self.po_sizer.Replace(w , dummypanel)
             self.po_sizer.Detach(w)
             w.Destroy()
-        print self.po_sizer.CalcRowsCols()
+        #print self.po_sizer.CalcRowsCols()
         self.po_sizer.Layout()
 
     def delete_operation(self,event,platecallercombobox):
@@ -1182,21 +1199,23 @@ class PlateOperations(wx.ScrolledWindow):
         # Called by Other Class to create list used to setup comboboxes here
         if self.GetParent().PLATE_CONFIGURED:
             self.platelist = self.GetParent().plateobjects
-
+        else:
+            wx.MessageBox("Setting Choices regardless")
+            self.platelist = self.GetParent().plateobjects
 #        print "SETTING BUTTON TO UNCLICKABLE " ,self.GetParent().FindWindowByName("platesetup").GetName()
 #        self.GetParent().FindWindowByName("platesetup").plate_add_button.Enable(False)
 
     def make_component_choice_list(self):
         self.component_frame_choices = []
         self.buffer_frame_choices = []
-        print "IYSYSY",self.GetParent().FindWindowByName("components").all_solutionsdict,self.GetParent().FindWindowByName("components").buffer_namedict
+#        print "IYSYSY",self.GetParent().FindWindowByName("components").all_solutionsdict,self.GetParent().FindWindowByName("components").buffer_namedict
         try:
             for key in self.GetParent().FindWindowByName("components").all_solutionsdict:
                 self.component_frame_choices.append(self.GetParent().FindWindowByName("components").all_solutionsdict[key][0])
             for key in self.GetParent().FindWindowByName("components").buffer_namedict:
                 self.buffer_frame_choices.append(self.GetParent().FindWindowByName("components").buffer_namedict[key][0])
         except KeyError , e:
-            print "Something wrong , no generation of Component list or plate list possible at this time"
+            #print "Something wrong , no generation of Component list or plate list possible at this time"
             if not self.GetParent().FindWindowByName("components").IS_CONFIGURED:
                 wx.MessageBox("Please configure components and retry")
         # Refresh existing choice boxes
@@ -1216,7 +1235,7 @@ class PlateOperations(wx.ScrolledWindow):
                         # Deermine if we expeted a component or a buffer here
                         if "Buffer" in self.po_sizer.GetItem(row*cols + 1).GetWindow().GetValue():
                             w.Clear()
-                            print "BUFFER REPLACING" , w.choices,self.buffer_frame_choices
+                            #print "BUFFER REPLACING" , w.choices,self.buffer_frame_choices
                             w.SetItems(self.buffer_frame_choices)
                             if selected in self.component_frame_choices:
                                 w.SetValue(selected)
@@ -1224,7 +1243,7 @@ class PlateOperations(wx.ScrolledWindow):
                                 w.SetValue("")
 
                         else:
-                            print "COMponent REPLACING" , w.choices,self.component_frame_choices
+                            #print "COMponent REPLACING" , w.choices,self.component_frame_choices
                             w.Clear()
                             w.SetItems(self.component_frame_choices)
                             if selected in self.component_frame_choices:
@@ -1232,7 +1251,8 @@ class PlateOperations(wx.ScrolledWindow):
                             else:
                                 w.SetValue("")
                 except Exception , e:
-                    print "Nothing to Refresh"
+                    pass
+                    #print "Nothing to Refresh"
 
 
 
@@ -1275,14 +1295,19 @@ class PlateOperations(wx.ScrolledWindow):
             print "Not Linux/Mac/Windows I see"
             pass
         try:
+            EXE_PATH_TO_ADD = os.path.dirname(sys.executable)
             scrfile.write("#!/usr/bin/python\n")
+            scrfile.write("import sys\n")
+            scrfile.write("import os\n")
+            scrfile.write("""sys.path.append(r"%s")""" % EXE_PATH_TO_ADD + "\n")
+            scrfile.write("import gridder\n")
             scrfile.write("from gridder import masterplate,plate,component,buffercomponent\n")
             scrfile.write("mp = masterplate.Masterplate(%s,%d)\n" % (self.GetParent().FindWindowByName("mpanel").volttc.GetValue(),self.GetParent().FindWindowByName("platesetup").style))
 
             myplate_setup = self.GetParent().FindWindowByName("platesetup").plate_setup_dict
             for key in myplate_setup.keys():
                     com =  "p%s = plate.Plate(\"%s\",\"%s\",mp)\n" % ( key,myplate_setup[key][0],myplate_setup[key][1])
-                    print com
+                    #print com
                     scrfile.write(com)
 
             comppanel = self.GetParent().FindWindowByName("components").all_solutionsdict
@@ -1293,39 +1318,47 @@ class PlateOperations(wx.ScrolledWindow):
                     cargs = ""
                     cargs = ",".join(comppanel[key][1:])
                     com = "c%s = buffercomponent.SimpleBuffer(\"%s\" , %s)\n" % (key,comppanel[key][0],cargs)
-                    print com
+                    #print com
                     scrfile.write(com)
                     objdict[comppanel[key][0]] = "c%s " %  key
                 else:
                     cargs = ""
                     cargs = ",".join(comppanel[key][1:])
                     com = "c%s = component.Component(\"%s\" , %s)\n" % (key,comppanel[key][0],cargs)
-                    print com
+                    #print com
                     scrfile.write(com)
                     objdict[comppanel[key][0]] = "c%s " %  key
 
-            print self.plate_operations.keys()
 
+    # These are integer keys
             for i in self.plate_operations.keys():
-
+                # Bug in unicode cases in this code block
+                # TODO FIX bug
                 myobj = self.plate_operations[i]
-                print myobj.argdict
+                # We got the plateoperations object
+                #print myobj.argdict
                 argstring = "" 
                 args = ""
                 textentries = sorted(myobj.argdict.keys())
                 # Since event keys are negative numbers , to preserve argument order for functions we reverse the keys
                 textentries.reverse()
+                allargs = []
                 for sorted_key in textentries:
-                    argstring = argstring + myobj.argdict[sorted_key] + " "
-                args = ",".join(argstring.split())
+                    allargs.append(myobj.argdict[sorted_key])
+                print "ARGSTRING ARRAY IS ", allargs
+                #TODO understand implications of this change
+                # This line synthesizes tyhe raw string of args from the argdict
+                args = ",".join(allargs)
+                #print "Arguments for self.plate_operations.keys()",args
+                #args = r"%s" % argstring
                 component_keys = sorted(myobj.component_dict.keys())
                 cstring = ""
                 for sorted_component in component_keys:
                     cstring = cstring +  objdict[myobj.component_dict[sorted_component]] + " "
                 component_args = ",".join(cstring.split())
-                print myobj.plate
+                #print myobj.plate
                 com = "p%s.%s(%s,%s)\n" % (myobj.plate.split()[1],self.function_dict[myobj.op],component_args,args)
-                print com
+                print "Synthesized argstring is " , com
                 scrfile.write(com)
 
             # Add the water Component to each script
@@ -1350,6 +1383,7 @@ class PlateOperations(wx.ScrolledWindow):
             scrfile.write("mp.makefileforhamilton(r\"%s\",1)\n" % str(os.path.join(self.GetParent().dirtowriteto,"%s-hamilton.csv" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
             scrfile.close()
         except Exception as ec:
+            sys.stderr.write(ec.message)
             self.GetParent().GetStatusBar().SetBackgroundColour(wx.Colour(255,204,153))
             self.GetParent().GetStatusBar().SetStatusText("Something wrong in session file : Check all components and operations " + str(type(ec)))
             return
@@ -1361,7 +1395,8 @@ class PlateOperations(wx.ScrolledWindow):
             mystdout,mystderr = subp_status.communicate()
             if subp_status.returncode != 0 :
                 self.GetParent().GetStatusBar().SetBackgroundColour(wx.Colour(255,204,153))
-                print mystderr
+                #print mystderr
+                sys.stderr.write(mystderr)
                 self.GetParent().GetStatusBar().SetStatusText("\n".join(mystderr.splitlines()[-1:]))
                 return
             
@@ -1376,6 +1411,7 @@ class PlateOperations(wx.ScrolledWindow):
 #            self.GetParent().GetStatusBar().SetStatusText(p.message)
 
         except Exception , e:
+            sys.stderr.write(e.message)
             self.GetParent().GetStatusBar().SetBackgroundColour(wx.Colour(255,204,153))
             self.GetParent().GetStatusBar().SetStatusText(str(e))
 
@@ -1400,6 +1436,7 @@ class PlateOperations(wx.ScrolledWindow):
 
     # plate_id_mapper_dict maps plate components to their row positions
     plate_id_mapper_dict = {}
+
     def save_session(self,event,session_dict):
         tmp_dict = {}
         if self.plate_operations.keys():
@@ -1427,7 +1464,7 @@ class MpPanel(wx.ScrolledWindow):
         self.file_name_text = wx.TextCtrl(self,-1,"test")
         self.add_op_button = wx.Button(self,label="Add Operation")
         self.make_plate_button = wx.Button(self,label="Make Plate")
-        self.save_session_button = wx.Button(self,label="Save Session")
+        self.save_session_button = wx.Button(self,label="Save Session - Busted")
         self.refresh_operations_button = wx.Button(self,label="Delete all operations")
         self.Bind(wx.EVT_BUTTON,self.GetParent().FindWindowByName("plateop").add_operation,self.add_op_button)
         self.Bind(wx.EVT_BUTTON,self.GetParent().FindWindowByName("plateop").make_plate,self.make_plate_button)

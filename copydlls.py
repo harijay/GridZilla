@@ -6,5 +6,6 @@ dlllist = [r'C:\windows\system32\OLEAUT32.dll' ,r'C:\windows\system32\USER32.dll
 PWD = os.getcwd()
 import shutil
 for dll in dlllist:
-    print "Copying ", dll , " to" , os.path.join(os.curdir,"dist")
-    shutil.copy(dll,os.path.join(os.curdir,"dist"))
+    if "system32" not in dll:
+        print "Copying ", dll , " to" , os.path.join(os.curdir,"dist")
+        shutil.copy(dll,os.path.join(os.curdir,"dist"))

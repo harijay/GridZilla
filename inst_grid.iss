@@ -23,6 +23,7 @@ Source: .\dist\library.zip; DestDir: {app}\bin
 Source: gzilla_ico_dark.ico; DestDir: {app}\icons
 Source: gzilla_uninstall_ico_fin.ico; DestDir: {app}\icons
 Source: crystalcomponent.csv; DestDir: {app}\Examples
+Source: gridder\* ;DestDir:{app}\gridder
 
 [Icons]
 Name: {group}\Gridzilla; Filename: {app}\bin\gzilla.exe; IconFilename: {app}\icons\gzilla_ico_dark.ico

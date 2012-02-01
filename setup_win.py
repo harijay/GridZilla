@@ -1,4 +1,4 @@
 from distutils.core import setup
 import py2exe
-
-setup(console=['gzilla.py'])
+import gridder
+setup(console=['gzilla.py'], options = { "py2exe" : {"includes" : "gridder"}})
