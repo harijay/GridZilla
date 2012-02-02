@@ -683,6 +683,8 @@ class  ComponentPanel(wx.ScrolledWindow):
     def delete_component(self,event,caller):
         # Implement Component Deletion"
                 # Get row number of firing event
+        # TODO remove this component from the gridder well component dictionary since we are now using execfile
+        print "Before Deletion of compound gridder.well.Well.wellcomponentlist.componentfactory.keys()", len(gridder.well.Well.wellcomponentlist.componentfactory.keys())
         delpos = self.top_grid_sizer.GetItem(caller).GetPosition()
         index = self.get_index(delpos)
         #print index
@@ -706,7 +708,10 @@ class  ComponentPanel(wx.ScrolledWindow):
         self.num_components = self.num_components - 1
         self.top_grid_sizer.Layout()
         self.GetParent().Layout()
-        
+        # Re initialize the component factory
+        #TODO remove only the specific object. But wiping dict empty also works
+        gridder.well.Well.wellcomponentlist.componentfactory = {}
+        print "After Deletion of all components from gridder library",  len(gridder.well.Well.wellcomponentlist.componentfactory.keys())
         if self.IS_CONFIGURED:
             #print self.all_solutionsdict.pop(index/6)
             if self.buffer_namedict.has_key(index/6):
@@ -1296,10 +1301,14 @@ class PlateOperations(wx.ScrolledWindow):
             pass
         try:
             EXE_PATH_TO_ADD = os.path.dirname(sys.executable)
-            scrfile.write("#!/usr/bin/python\n")
+            #scrfile.write("#!/usr/bin/python\n")
             scrfile.write("import sys\n")
             scrfile.write("import os\n")
             scrfile.write("""sys.path.append(r"%s")""" % EXE_PATH_TO_ADD + "\n")
+            library_zip = os.path.join(EXE_PATH_TO_ADD,"library.zip")
+            scrfile.write("""sys.path.append(r"%s")""" % library_zip + "\n")
+            scrfile.write("import pprint\n")
+            scrfile.write("pprint.pprint(sys.path)\n")
             scrfile.write("import gridder\n")
             scrfile.write("from gridder import masterplate,plate,component,buffercomponent\n")
             scrfile.write("mp = masterplate.Masterplate(%s,%d)\n" % (self.GetParent().FindWindowByName("mpanel").volttc.GetValue(),self.GetParent().FindWindowByName("platesetup").style))
@@ -1390,22 +1399,25 @@ class PlateOperations(wx.ScrolledWindow):
             
         try:
             os.chmod((os.path.join(self.GetParent().dirtowriteto,"%s_scr.py" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))),0755)
-            
-            subp_status = subprocess.Popen(["python",os.path.join(self.GetParent().dirtowriteto,"%s_scr.py" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))],shell=False,stderr=subprocess.PIPE,stdout=subprocess.PIPE)
-            mystdout,mystderr = subp_status.communicate()
-            if subp_status.returncode != 0 :
-                self.GetParent().GetStatusBar().SetBackgroundColour(wx.Colour(255,204,153))
-                #print mystderr
-                sys.stderr.write(mystderr)
-                self.GetParent().GetStatusBar().SetStatusText("\n".join(mystderr.splitlines()[-1:]))
-                return
-            
-            
-                
-            self.GetParent().GetStatusBar().SetStatusText("DISPENSE LIST %s OUTPUT  " % str(os.path.join(self.GetParent().dirtowriteto,"%s.dl.txt" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
-            self.GetParent().GetStatusBar().SetStatusText("FILES OUTPUT with prefix %s" % str(os.path.join(self.GetParent().dirtowriteto,"%s" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
-            self.GetParent().GetStatusBar().SetBackgroundColour(wx.Colour(204,255,204))
-        
+            self.GetParent().GetStatusBar().SetStatusText("Making Dispense Lists")
+            execfile(os.path.join(self.GetParent().dirtowriteto,"%s_scr.py" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
+            self.GetParent().GetStatusBar().SetBackgroundColour(wx.Colour(0,204,153))
+            self.GetParent().GetStatusBar().SetStatusText(r"Files Written to Directory : %s" % self.GetParent().dirtowriteto )
+#            subp_status = subprocess.Popen(["python.exe",os.path.join(self.GetParent().dirtowriteto,"%s_scr.py" % str(self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue()))],shell=False,stderr=None,stdout=None)
+#            mystdout,mystderr = subp_status.communicate()
+#            if subp_status.returncode != 0 :
+#                self.GetParent().GetStatusBar().SetBackgroundColour(wx.Colour(255,204,153))
+#                #print mystderr
+#                sys.stderr.write(mystderr)
+#                self.GetParent().GetStatusBar().SetStatusText("\n".join(mystderr.splitlines()[-1:]))
+#                return
+#
+#
+#
+#            self.GetParent().GetStatusBar().SetStatusText("DISPENSE LIST %s OUTPUT  " % str(os.path.join(self.GetParent().dirtowriteto,"%s.dl.txt" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
+#            self.GetParent().GetStatusBar().SetStatusText("FILES OUTPUT with prefix %s" % str(os.path.join(self.GetParent().dirtowriteto,"%s" % self.GetParent().FindWindowByName("mpanel").file_name_text.GetValue())))
+#            self.GetParent().GetStatusBar().SetBackgroundColour(wx.Colour(204,255,204))
+#
 #        except plateliberror.PlatelibException , p :
 #            self.GetParent().GetStatusBar().SetBackgroundColour(wx.Colour(255,204,153))
 #            self.GetParent().GetStatusBar().SetStatusText(p.message)
@@ -1464,7 +1476,7 @@ class MpPanel(wx.ScrolledWindow):
         self.file_name_text = wx.TextCtrl(self,-1,"test")
         self.add_op_button = wx.Button(self,label="Add Operation")
         self.make_plate_button = wx.Button(self,label="Make Plate")
-        self.save_session_button = wx.Button(self,label="Save Session - Busted")
+        self.save_session_button = wx.Button(self,label="Save Session")
         self.refresh_operations_button = wx.Button(self,label="Delete all operations")
         self.Bind(wx.EVT_BUTTON,self.GetParent().FindWindowByName("plateop").add_operation,self.add_op_button)
         self.Bind(wx.EVT_BUTTON,self.GetParent().FindWindowByName("plateop").make_plate,self.make_plate_button)
