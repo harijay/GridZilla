@@ -949,14 +949,21 @@ class PromptingComboBox(wx.ComboBox) :
 
 class PlateOperations(wx.ScrolledWindow):
     #dict structure is an operations followed by a dict of arguments
-    function_dict = {"Add To Row":"push_component_to_row_on_masterplate",\
-    "Add To Column":"push_component_to_column_on_masterplate","Add To Entire Plate":"push_component_uniform_to_masterplate",\
+    function_dict = {"Component To Single Row":"push_component_to_row_on_masterplate",\
+    "Component To Single Column":"push_component_to_column_on_masterplate","Add To Entire Plate":"push_component_uniform_to_masterplate",\
     "Gradient Along X":"gradient_along_x","Gradient Along Y":"gradient_along_y","Gradient List Along X":"gradientlist_along_x",\
     "Gradient List Along Y":"gradientlist_along_y","Component To Multiple Rows":"push_component_rowlist",\
     "Component To Multiple Columns":"push_component_columnlist","Buffer pH Gradient Along X":"ph_gradient_alongx","Buffer pH Gradient Along Y":"ph_gradient_alongy",\
     "Buffer pH List Along X":"ph_list_alongx","Buffer pH List Along Y":"ph_list_alongy","Make To 100 Along X":"maketo100_alongx",\
-    "Make To 100 Along Y":"maketo100_alongy","Make To 100 List X":"maketo100_listx","Make To 100 List Y":"maketo100_listy","Gradient List to Row":"gradient_list_to_row","Gradient List to Column":"gradient_list_to_column"}
-    masterdict = {'Gradient List Along X': ['Component', 'LISTVALS'], 'Gradient List Along Y': ['Component', 'LISTVALS'], 'Make To 100 Along X': ['Component', 'Component', 'FinalConc', 'FinalConcStartComponent1', 'FinalConcStopComponent1'], 'Make To 100 Along Y': ['Component', 'Component', 'FinalConc', 'FinalConcStartComponent1', 'FinalConcStopComponent1'], 'Add To Entire Plate': ['Component', 'FinalConc'], 'Make To 100 List X': ['Component', 'Component', 'FinalConc', 'LISTVALS'], 'Add To Column': ['Component', 'FinalConc', 'NUM'], 'Buffer pH List Along Y': ['Buffer', 'Buffer', 'FinalConc', 'LISTVALS'], 'Buffer pH List Along X': ['Buffer', 'Buffer', 'FinalConc', 'LISTVALS'], 'Add To Row': ['Component', 'FinalConc', 'ALPHA'], 'Buffer pH Gradient Along Y': ['Buffer', 'Buffer', 'FinalConc', 'pHSTART', 'pHSTOP'], 'Buffer pH Gradient Along X': ['Buffer', 'Buffer', 'FinalConc', 'pHSTART', 'pHSTOP'], 'Component To Multiple Rows': ['Component', 'FinalConc', 'LISTROWS'], 'Component To Multiple Columns': ['Component', 'FinalConc', 'LISTCOLS'], 'Make To 100 List Y': ['Component', 'Component', 'FinalConc', 'LISTVALS'], 'Gradient Along Y': ['Component', 'FinalConcStart', 'FinalConcStop'], 'Gradient Along X': ['Component', 'FinalConcStart', 'FinalConcStop'],"Gradient List to Row" :['Component','Concentration_List','row alpha'],"Gradient List to Column" : ['Component','Concentration_List','row_number']}
+    "Make To 100 Along Y":"maketo100_alongy","Make To 100 List X":"maketo100_listx","Make To 100 List Y":"maketo100_listy","Gradient List to Single Row":"gradient_list_to_row","Gradient List to Single Column":"gradient_list_to_column",\
+    "Gradient List to Multiple Rows":"gradient_list_to_multiple_rows","Gradient List to Multiple Columns":"gradient_list_to_multiple_columns"}
+    masterdict = {'Gradient List Along X': ['Component', 'LISTVALS'], 'Gradient List Along Y': ['Component', 'LISTVALS'], 'Make To 100 Along X': ['Component', 'Component', 'FinalConc', 'FinalConcStartComponent1', 'FinalConcStopComponent1'], 'Make To 100 Along Y': ['Component', 'Component', 'FinalConc', 'FinalConcStartComponent1', 'FinalConcStopComponent1'], 'Add To Entire Plate': ['Component', 'FinalConc'], \
+                  'Make To 100 List X': ['Component', 'Component', 'FinalConc', 'LISTVALS'], 'Component To Single Column': ['Component', 'FinalConc', 'NUM'], 'Buffer pH List Along Y': ['Buffer', 'Buffer', 'FinalConc', 'LISTVALS'],\
+                  'Buffer pH List Along X': ['Buffer', 'Buffer', 'FinalConc', 'LISTVALS'], 'Component To Single Row': ['Component', 'FinalConc', 'ALPHA'], 'Buffer pH Gradient Along Y': ['Buffer', 'Buffer', 'FinalConc', 'pHSTART', 'pHSTOP'], \
+                  'Buffer pH Gradient Along X': ['Buffer', 'Buffer', 'FinalConc', 'pHSTART', 'pHSTOP'], 'Component To Multiple Rows': ['Component', 'FinalConc', 'LISTROWS'], 'Component To Multiple Columns': ['Component', 'FinalConc', 'LISTCOLS'], \
+                  'Make To 100 List Y': ['Component', 'Component', 'FinalConc', 'LISTVALS'], 'Gradient Along Y': ['Component', 'FinalConcStart', 'FinalConcStop'], 'Gradient Along X': ['Component', 'FinalConcStart', 'FinalConcStop'],\
+                  "Gradient List to Single Row" :['Component','Concentration_List','row alphabet'],"Gradient List to Single Column" : ['Component','Concentration_List','column_number'],\
+                  "Gradient List to Multiple Rows":['Component','Concentration_List',"Row Alpha List"],"Gradient List to Multiple Columns":["Component","Concentration_List","Column Number List"]}
 
 
     IS_COMPONENT = None
