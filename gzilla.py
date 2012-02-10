@@ -956,14 +956,19 @@ class PlateOperations(wx.ScrolledWindow):
     "Component To Multiple Columns":"push_component_columnlist","Buffer pH Gradient Along X":"ph_gradient_alongx","Buffer pH Gradient Along Y":"ph_gradient_alongy",\
     "Buffer pH List Along X":"ph_list_alongx","Buffer pH List Along Y":"ph_list_alongy","Make To 100 Along X":"maketo100_alongx",\
     "Make To 100 Along Y":"maketo100_alongy","Make To 100 List X":"maketo100_listx","Make To 100 List Y":"maketo100_listy","Gradient List to Single Row":"gradient_list_to_row","Gradient List to Single Column":"gradient_list_to_column",\
-    "Gradient List to Multiple Rows":"gradient_list_to_multiple_rows","Gradient List to Multiple Columns":"gradient_list_to_multiple_columns"}
+    "Gradient List to Multiple Rows":"gradient_list_to_multiple_rows","Gradient List to Multiple Columns":"gradient_list_to_multiple_columns",\
+    "Buffer single pH to row or rows":"buffer_single_ph_to_row_or_rows","Buffer single pH to column or columns":"buffer_single_ph_to_column_or_columns",
+    "Buffer pH list to single row":"buffer_multiple_phs_to_single_row","Buffer pH list to single column":"buffer_multiple_phs_to_single_column"}
     masterdict = {'Gradient List Along X': ['Component', 'LISTVALS'], 'Gradient List Along Y': ['Component', 'LISTVALS'], 'Make To 100 Along X': ['Component', 'Component', 'FinalConc', 'FinalConcStartComponent1', 'FinalConcStopComponent1'], 'Make To 100 Along Y': ['Component', 'Component', 'FinalConc', 'FinalConcStartComponent1', 'FinalConcStopComponent1'], 'Add To Entire Plate': ['Component', 'FinalConc'], \
                   'Make To 100 List X': ['Component', 'Component', 'FinalConc', 'LISTVALS'], 'Component To Single Column': ['Component', 'FinalConc', 'NUM'], 'Buffer pH List Along Y': ['Buffer', 'Buffer', 'FinalConc', 'LISTVALS'],\
                   'Buffer pH List Along X': ['Buffer', 'Buffer', 'FinalConc', 'LISTVALS'], 'Component To Single Row': ['Component', 'FinalConc', 'ALPHA'], 'Buffer pH Gradient Along Y': ['Buffer', 'Buffer', 'FinalConc', 'pHSTART', 'pHSTOP'], \
                   'Buffer pH Gradient Along X': ['Buffer', 'Buffer', 'FinalConc', 'pHSTART', 'pHSTOP'], 'Component To Multiple Rows': ['Component', 'FinalConc', 'LISTROWS'], 'Component To Multiple Columns': ['Component', 'FinalConc', 'LISTCOLS'], \
                   'Make To 100 List Y': ['Component', 'Component', 'FinalConc', 'LISTVALS'], 'Gradient Along Y': ['Component', 'FinalConcStart', 'FinalConcStop'], 'Gradient Along X': ['Component', 'FinalConcStart', 'FinalConcStop'],\
                   "Gradient List to Single Row" :['Component','Concentration_List','row alphabet'],"Gradient List to Single Column" : ['Component','Concentration_List','column_number'],\
-                  "Gradient List to Multiple Rows":['Component','Concentration_List',"Row Alpha List"],"Gradient List to Multiple Columns":["Component","Concentration_List","Column Number List"]}
+                  "Gradient List to Multiple Rows":['Component','Concentration_List',"Row Alpha List"],"Gradient List to Multiple Columns":["Component","Concentration_List","Column Number List"],\
+                  "Buffer single pH to row or rows":['Buffer',"Buffer","FinalConc","pH desired","""["A"] or ["A","D"]"""],\
+                  "Buffer single pH to column or columns":['Buffer',"Buffer","FinalConc","pH desired","""[1] or [1,4]"""],\
+                  "Buffer pHList to single row":["Buffer","Buffer","FinalConc","pHList","A"], "Buffer pHlist to single column":["Buffer","Buffer","FinalConc","pHList","3"]}
 
 
     IS_COMPONENT = None
